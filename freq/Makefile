@@ -1,5 +1,5 @@
 default: build
-hard: run
+hard: test
 
 build:
 	cargo build
