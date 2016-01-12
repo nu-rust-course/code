@@ -5,37 +5,9 @@ a sorted frequency table.
 Assumptions:
 "]
 fn main() {
-    // let word_counts = read_and_count(...);
-    // print_counts(word_counts);
 }
 
 type CountTable = std::collections::HashMap<String, usize>;
-
-// bool
-// char
-// usize (like size_t)
-// ssize (like ssize_t)
-// u8, u16, u32, u64
-// s8, ...
-// f32, f64
-//
-// String (like std::string)
-// &str (like const char*)
-
-// impl<K, V, S> HashMap<K, V, S> {
-//     fn get(&self, k: &K) -> Option<&V> {
-//         ...
-//     }
-// }
-
-// let π = e;
-// stms...
-//
-//   ===
-//
-// match e {
-//   π => stms...
-// }
 
 fn increment_word(mut map: &mut CountTable, word: String) {
     *map.entry(word).or_insert(0) += 1;
