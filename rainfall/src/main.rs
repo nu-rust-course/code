@@ -57,23 +57,21 @@ use std::io::{BufRead,BufReader,Read,stdin};
 
 fn main() {
     let measurements = read_measurements(stdin());
-    produce_output(calculate_result(&measurements));
+    produce_output(&calculate_results(&measurements));
 }
 
-#[derive(Copy, Clone)]
-struct Result {
-    mean: f64,
-    below: usize,
+struct Results {
+    mean:  f64,
     above: usize,
+    below: usize,
 }
 
-/// Reads valid (non-negative, non-noise) measurements from `reader`.
 fn read_measurements<R: Read>(reader: R) -> Vec<f64> {
-    let mut measurements = vec![];
+    let mut measurements: Vec<f64> = vec![]; // Vec::new()
     let mut lines = BufReader::new(reader).lines();
 
     while let Some(Ok(line)) = lines.next() {
-        if line == "999" { break }
+        if line == "999" {break}
 
         if let Ok(f) = line.parse() {
             if f >= 0.0 {
@@ -87,7 +85,7 @@ fn read_measurements<R: Read>(reader: R) -> Vec<f64> {
 
 #[cfg(test)]
 mod read_measurements_test {
-    use super::read_measurements;
+    use super::{read_measurements};
     use std::io::{Read, Result};
 
     #[test]
@@ -97,14 +95,23 @@ mod read_measurements_test {
 
     #[test]
     fn discards_negative() {
-        assert_read(&[3., 4., 5.], "3\n4\n-7\n5\n");
+        assert_read(&[3., 4., 5.], "3\n4\n-6\n5\n");
+    }
+
+    #[test]
+    fn discards_noise() {
+        assert_read(&[3., 4., 5.], "3\n4\nsix\n5\n");
+    }
+
+    #[test]
+    fn stops_at_999() {
+        assert_read(&[3., 4.], "3\n4\n999\n5\n");
     }
 
     fn assert_read(expected: &[f64], input: &str) {
-        let mock_reader  = StringReader::new(input.to_owned());
-        let measurements = read_measurements(mock_reader);
-
-        assert_eq!(expected, &measurements as &[f64]);
+        let mock_read = StringReader::new(input.to_owned());
+        let measurements = read_measurements(mock_read);
+        assert_eq!(expected.to_owned(), measurements);
     }
 
     struct StringReader {
@@ -114,7 +121,10 @@ mod read_measurements_test {
 
     impl StringReader {
         fn new(s: String) -> Self {
-            StringReader { contents: s.into_bytes(), position: 0 }
+            StringReader {
+                contents: s.into_bytes(),
+                position: 0,
+            }
         }
     }
 
@@ -133,78 +143,48 @@ mod read_measurements_test {
     }
 }
 
-/// Calculates the mean and counts given the samples.
-fn calculate_result(fs: &[f64]) -> Result {
-    let mean  = mean(fs);
-    let below = count_vec(fs, |x| mean - 5.0 <= x && x < mean);
-    let above = count_vec(fs, |x| mean < x && x <= mean + 5.0);
+fn calculate_results(fs: &[f64]) -> Results {
+    let m = mean(fs);
+    let b = fs.iter().filter(|&&x| m - 5.0 <= x && x < m).count();
+    let a = fs.iter().filter(|&&x| m < x && x <= m + 5.0).count();
 
-    Result {mean: mean, below: below, above: above}
+    Results {
+        mean:  m,
+        above: a,
+        below: b,
+    }
 }
 
-/// Counts the number of elements of vector `v` satisfying predicate `f`
-fn count_vec<F: Fn(f64) -> bool>(v: &[f64], f: F) -> usize {
-    v.iter().filter(|&&x| f(x)).count()
-}
-
-/// Computes the mean of a slice, returning NaN if the slice is empty.
 fn mean(samples: &[f64]) -> f64 {
-    sum(samples) / samples.len() as f64
+    sum(samples) / (samples.len() as f64)
 }
 
-#[cfg(test)]
-mod mean_test {
-    use super::mean;
-
-    #[test]
-    fn mean_of_one() {
-        assert_eq!(4.5, mean(&[4.5]));
-    }
-
-    #[test]
-    fn mean_of_two() {
-        assert_eq!(4.5, mean(&[3., 6.]));
-    }
-
-    #[test]
-    fn mean_of_more() {
-        assert_eq!(3.5, mean(&[3., 5., 8., -2.]));
-    }
-
-    #[test]
-    fn mean_of_empty() {
-        assert!(mean(&[]).is_nan());
-    }
-}
-
-/// Sums the numbers in a slice.
 fn sum(samples: &[f64]) -> f64 {
-    samples.iter().fold(0.0, |x,&y| x + y)
+    samples.iter().fold(0.0, |a,b| a + *b)
 }
 
 #[cfg(test)]
-mod sum_test {
+mod sum_tests {
     use super::sum;
 
     #[test]
-    fn empty_sums_to_0() {
-        assert_eq!(0., sum(&[]));
+    fn sum_empty_is_0() {
+        assert_eq!(0.0, sum(&[]));
     }
 
     #[test]
-    fn triangle_sums_to_10() {
-        assert_eq!(10., sum(&[1., 2., 3., 4.]));
+    fn sum_1_2_3_4_is_10() {
+        assert_eq!(10.0, sum(&[1., 2., 3., 4.]));
     }
 }
 
-/// Prints the results.
-fn produce_output(r: Result) {
-    if r.mean.is_nan() {
-        println!("No measurements provided.");
-    } else {
-        println!("Mean rainfall: {} cm", r.mean);
-        println!("Below count:   {}", r.below);
-        println!("Above count:   {}", r.above);
-    }
+fn produce_output(r: &Results) {
+  if r.mean.is_nan() {
+      println!("No measurements provided.");
+  } else {
+      println!("Mean rainfall: {} cm", r.mean);
+      println!("Below count:   {}", r.above);
+      println!("Above count:   {}", r.below);
+  }
 }
 
