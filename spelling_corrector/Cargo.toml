@@ -1,0 +1,5 @@
+[package]
+
+name = "spelling_corrector"
+version = "0.0.1"
+authors = ["Jesse A. Tov <jesse.tov@gmail.com>"]
