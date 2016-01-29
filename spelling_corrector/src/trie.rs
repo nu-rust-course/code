@@ -65,6 +65,7 @@ impl<T> Node<T> {
         }
     }
 
+    /// Looks up a key in the trie, returning its value or the given default.
     fn lookup<'a, 'b>(&'a self, key: &'b [usize], default: &'a Option<T>)
         -> &'a Option<T>
     {
@@ -79,14 +80,17 @@ impl<T> Node<T> {
 }
 
 impl<'a, T> Cursor<'a, T> {
+    /// Gets the value of the node this cursor points to.
     pub fn value(&self) -> &'a Option<T> {
         &self.node.value
     }
 
+    /// Gets a cursor to the `key`th child.
     pub fn child(&self, key: usize) -> Option<Self> {
         self.node.children[key].as_ref().map(|n| n.cursor())
     }
 
+    /// Updates this cursor to point to the `key`th child.
     pub fn descend(&mut self, key: usize) -> bool {
         match self.child(key) {
             None         => false,
@@ -96,19 +100,23 @@ impl<'a, T> Cursor<'a, T> {
 }
 
 impl<'a, T> CursorMut<'a, T> {
+    /// Borrows an immutable cursor from this mutable cursor.
     pub fn freeze(&self) -> Cursor<T> {
         self.node.cursor()
     }
 
+    /// Gets the value of the node this cursor points to.
     pub fn value(&mut self) -> &mut Option<T> {
         &mut self.node.value
     }
 
+    /// Gets a cursor to the `key`th child.
     pub fn child(&'a mut self, key: usize) -> Option<Self> {
         let factor = self.factor;
         self.node.children[key].as_mut().map(|n| n.cursor_mut(factor))
     }
 
+    /// Consumes a cursor, returning a cursor to the `key`th child.
     pub fn into_child(self, key: usize) -> Option<Self> {
         let factor = self.factor;
         self.node.children[key].as_mut().map(|n| n.cursor_mut(factor))
