@@ -2,16 +2,16 @@ use std::cmp::Ordering;
 use std::cmp::Ordering::*;
 use std::mem;
 
-pub struct BST<K, V>(NodePtr<K, V>);
+pub struct BST<K, V>(Link<K, V>);
 
 struct Node<K, V> {
     key:   K,
     value: V,
-    left:  NodePtr<K, V>,
-    right: NodePtr<K, V>,
+    left:  Link<K, V>,
+    right: Link<K, V>,
 }
 
-type NodePtr<K, V> = Option<Box<Node<K, V>>>;
+type Link<K, V> = Option<Box<Node<K, V>>>;
 
 struct CursorMut<'a, K: 'a, V: 'a>(Option<&'a mut Node<K, V>>);
 
@@ -36,7 +36,7 @@ impl<K: Ord, V> BST<K, V> {
 }
 
 impl<K, V> Node<K, V> {
-    fn len(ptr: &NodePtr<K, V>) -> usize {
+    fn len(ptr: &Link<K, V>) -> usize {
         if let &Some(ref n) = ptr {
             1 + Node::len(&n.left) + Node::len(&n.right)
         } else {0}
@@ -44,7 +44,7 @@ impl<K, V> Node<K, V> {
 }
 
 impl<K: Ord, V> Node<K, V> {
-    fn find_rec<'a, 'b>(ptr: &'a NodePtr<K, V>, key: &'b K) -> Option<&'a V> {
+    fn find_rec<'a, 'b>(ptr: &'a Link<K, V>, key: &'b K) -> Option<&'a V> {
         if let &Some(ref n) = ptr {
             match key.cmp(&n.key) {
                 Less    => Node::find_rec(&n.left, key),
@@ -54,7 +54,7 @@ impl<K: Ord, V> Node<K, V> {
         } else {None}
     }
 
-    fn find_iter<'a, 'b>(mut ptr: &'a NodePtr<K, V>, key: &'b K)
+    fn find_iter<'a, 'b>(mut ptr: &'a Link<K, V>, key: &'b K)
         -> Option<&'a V>
     {
         while let &Some(ref n) = ptr {
@@ -68,7 +68,7 @@ impl<K: Ord, V> Node<K, V> {
         None
     }
 
-    fn find_mut_rec<'a, 'b>(ptr: &'a mut NodePtr<K, V>, key: &'b K)
+    fn find_mut_rec<'a, 'b>(ptr: &'a mut Link<K, V>, key: &'b K)
         -> Option<&'a mut V>
     {
         if let &mut Some(ref mut n) = ptr {
@@ -80,7 +80,7 @@ impl<K: Ord, V> Node<K, V> {
         } else {None}
     }
 
-    fn find_mut_iter<'a, 'b>(ptr: &'a mut NodePtr<K, V>, key: &'b K)
+    fn find_mut_iter<'a, 'b>(ptr: &'a mut Link<K, V>, key: &'b K)
         -> Option<&'a mut V>
     {
         let mut cur: CursorMut<'a, K, V> =
@@ -117,14 +117,4 @@ impl<'a, K, V> CursorMut<'a, K, V> {
     fn into_value(self) -> Option<&'a mut V> {
         self.0.map(|n| &mut n.value)
     }
-}
-
-//////////
-struct StringPair {
-    x : String,
-    y : String,
-}
-
-fn snd_len(&StringPair {x: ref sx, y: ref sy}: &StringPair) -> usize {
-    sx.len() + sy.len()
 }
