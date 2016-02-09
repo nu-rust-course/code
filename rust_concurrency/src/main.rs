@@ -5,7 +5,7 @@ use std::cmp::{min,max};
 use std::fmt::{self, Display};
 use std::io::{self,Write};
 use std::rc::Rc;
-use std::sync::{Arc,Mutex};
+use std::sync::{Arc,Mutex,Semaphore};
 use std::thread;
 use std::time::Duration;
 
@@ -156,24 +156,22 @@ fn two_dining_philosophers() {
 ///////////////////////////////////////////////////////////////////////////////
 
 fn dining_philosophers(n: usize) {
-    let chopsticks: Arc<Vec<Mutex<Chopstick>>> =
-        Arc::new((0 .. n).map(|i| Mutex::new(Chopstick::new(i))).collect());
+    let chopsticks: Vec<Arc<Mutex<Chopstick>>> =
+        (0 .. n).map(|i| Arc::new(Mutex::new(Chopstick::new(i)))).collect();
 
     for i in 0 .. n {
         let j = (i + 1) % n;
 
-        let my_chopsticks = chopsticks.clone();
-
-        let fst = min(i, j);
-        let snd = max(i, j);
+        let cs_i = chopsticks[min(i, j)].clone();
+        let cs_j = chopsticks[max(i, j)].clone();
 
         thread::spawn(move|| {
             loop {
                 {
-                    let mut guard_i = my_chopsticks[fst].lock().unwrap();
+                    let mut guard_i = cs_i.lock().unwrap();
                     println!("Philosopher {} picks up {}", i, *guard_i);
                     random_sleep(DP_CSLATENCY_MIN, DP_CSLATENCY_MAX);
-                    let mut guard_j = my_chopsticks[snd].lock().unwrap();
+                    let mut guard_j = cs_j.lock().unwrap();
                     println!("Philosopher {} picks up {}", i, *guard_j);
 
                     eat(i, &mut guard_i, &mut guard_j);
@@ -184,6 +182,69 @@ fn dining_philosophers(n: usize) {
         });
 
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const SEATS: usize = 3;
+const HAIRCUT_MIN: u64 = 500;
+const HAIRCUT_MAX: u64 = 1000;
+const ARRIVAL_MIN: u64 = 250;
+const ARRIVAL_MAX: u64 = 1000;
+
+fn sleeping_barber() {
+    let free_seats      = Arc::new(Mutex::new(SEATS));
+    let customers_ready = Arc::new(Semaphore::new(0));
+    let barber_ready    = Arc::new(Semaphore::new(0));
+
+    // Barber
+    {
+        let free_seats = free_seats.clone();
+        let customers_ready = customers_ready.clone();
+        let barber_ready = barber_ready.clone();
+
+        thread::spawn(move|| {
+            loop {
+                customers_ready.acquire();
+                barber_ready.release();
+                *free_seats.lock().unwrap() += 1;
+
+                println!("Barber begins cutting");
+
+                random_sleep(HAIRCUT_MIN, HAIRCUT_MAX);
+
+                println!("Barber finishes cutting");
+            }
+        });
+    }
+
+    thread::spawn(move|| {
+        for i in 0 .. {
+            random_sleep(ARRIVAL_MIN, ARRIVAL_MAX);
+
+            let free_seats = free_seats.clone();
+            let customers_ready = customers_ready.clone();
+            let barber_ready = barber_ready.clone();
+
+            thread::spawn(move|| {
+                {
+                    let mut free_seats_guard = free_seats.lock().unwrap();
+
+                    if *free_seats_guard == 0 {
+                        println!("Customer {} gives up", i);
+                        return;
+                    } else {
+                        println!("Customer {} sits down", i);
+                        *free_seats_guard -= 1;
+                        customers_ready.release();
+                    }
+                }
+
+                barber_ready.acquire();
+                println!("Customer {} begins getting cut", i);
+            });
+        }
+    });
 }
 
 ///////////////////////////////////////////////////////////////////////////////
