@@ -156,22 +156,24 @@ fn two_dining_philosophers() {
 ///////////////////////////////////////////////////////////////////////////////
 
 fn dining_philosophers(n: usize) {
-    let chopsticks: Vec<Arc<Mutex<Chopstick>>> =
-        (0 .. n).map(|i| Arc::new(Mutex::new(Chopstick::new(i)))).collect();
+    let chopsticks: Arc<Vec<Mutex<Chopstick>>> =
+        Arc::new((0 .. n).map(|i| Mutex::new(Chopstick::new(i))).collect());
 
     for i in 0 .. n {
         let j = (i + 1) % n;
 
-        let cs_i = chopsticks[min(i, j)].clone();
-        let cs_j = chopsticks[max(i, j)].clone();
+        let my_chopsticks = chopsticks.clone();
+
+        let fst = min(i, j);
+        let snd = max(i, j);
 
         thread::spawn(move|| {
             loop {
                 {
-                    let mut guard_i = cs_i.lock().unwrap();
+                    let mut guard_i = my_chopsticks[fst].lock().unwrap();
                     println!("Philosopher {} picks up {}", i, *guard_i);
                     random_sleep(DP_CSLATENCY_MIN, DP_CSLATENCY_MAX);
-                    let mut guard_j = cs_j.lock().unwrap();
+                    let mut guard_j = my_chopsticks[snd].lock().unwrap();
                     println!("Philosopher {} picks up {}", i, *guard_j);
 
                     eat(i, &mut guard_i, &mut guard_j);
