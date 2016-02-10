@@ -4,12 +4,13 @@
 use std::cmp::{min,max};
 use std::fmt::{self, Display};
 use std::io::{self,Write};
-use std::rc::Rc;
-use std::sync::{Arc,Mutex,Semaphore};
+use std::sync::{Arc,Mutex};
 use std::thread;
 use std::time::Duration;
 
 extern crate rand;
+
+mod semaphore;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -60,9 +61,12 @@ fn n_counters(n: usize) {
 
 // Sleeps for for between min and max milliseconds
 fn random_sleep(min: u64, max: u64) {
-    let millis = min + (rand::random::<u64>() % (max - min));
+    let millis = if min == max {min}
+                 else {min + (rand::random::<u64>() % (max - min))};
     thread::sleep(Duration::from_millis(millis));
 }
+
+///////////////////////////////////////////////////////////////////////////////
 
 struct Chopstick {
     which: String,
@@ -105,18 +109,6 @@ fn eat<N: Display>(who: N, cs1: &mut Chopstick, cs2: &mut Chopstick) {
     cs1.eat(); cs2.eat();
     println!("Philosopher {} eats with {} and {}", who, cs1, cs2);
     random_sleep(DP_SLEEP_MIN, DP_SLEEP_MAX);
-}
-
-fn f(x: Rc<Vec<usize>>) {
-    println!("{}", x[0]);
-}
-
-fn refcounting() {
-    let v: Vec<usize> = vec![2, 3, 4];
-    let r: Rc<Vec<usize>> = Rc::new(v);
-
-    f(r.clone());
-    f(r.clone());
 }
 
 fn two_dining_philosophers() {
@@ -187,12 +179,14 @@ fn dining_philosophers(n: usize) {
 ///////////////////////////////////////////////////////////////////////////////
 
 const SEATS: usize = 3;
-const HAIRCUT_MIN: u64 = 500;
+const HAIRCUT_MIN: u64 = 1000;
 const HAIRCUT_MAX: u64 = 1000;
 const ARRIVAL_MIN: u64 = 250;
-const ARRIVAL_MAX: u64 = 1000;
+const ARRIVAL_MAX: u64 = 750;
 
 fn sleeping_barber() {
+    use semaphore::Semaphore;
+
     let free_seats      = Arc::new(Mutex::new(SEATS));
     let customers_ready = Arc::new(Semaphore::new(0));
     let barber_ready    = Arc::new(Semaphore::new(0));
@@ -205,14 +199,12 @@ fn sleeping_barber() {
 
         thread::spawn(move|| {
             loop {
-                customers_ready.acquire();
-                barber_ready.release();
+                customers_ready.lower();
+                barber_ready.raise();
                 *free_seats.lock().unwrap() += 1;
 
                 println!("Barber begins cutting");
-
                 random_sleep(HAIRCUT_MIN, HAIRCUT_MAX);
-
                 println!("Barber finishes cutting");
             }
         });
@@ -236,11 +228,11 @@ fn sleeping_barber() {
                     } else {
                         println!("Customer {} sits down", i);
                         *free_seats_guard -= 1;
-                        customers_ready.release();
+                        customers_ready.raise();
                     }
                 }
 
-                barber_ready.acquire();
+                barber_ready.lower();
                 println!("Customer {} begins getting cut", i);
             });
         }
@@ -254,7 +246,9 @@ fn main() {
     // refcounting();
     // two_dining_philosophers();
 
-    dining_philosophers(5);
+    // dining_philosophers(5);
+
+    sleeping_barber();
 
     wait_for_enter();
 }
