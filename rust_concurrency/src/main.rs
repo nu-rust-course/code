@@ -2,11 +2,14 @@
 #![allow(unused_variables)]
 
 use std::cmp::{min,max};
+use std::collections::LinkedList;
 use std::fmt::{self, Display};
 use std::io::{self,Write};
-use std::sync::{Arc,Mutex};
+use std::sync::{Arc,Condvar,Mutex};
 use std::thread;
 use std::time::Duration;
+
+use semaphore::Semaphore;
 
 extern crate rand;
 
@@ -178,15 +181,42 @@ fn dining_philosophers(n: usize) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+fn condvar_demo(n: usize) {
+    let mutex = Arc::new(Mutex::new(n));
+    let cv    = Arc::new(Condvar::new());
+
+    for i in 0 .. n {
+        let mutex = mutex.clone();
+        let cv    = cv.clone();
+
+        thread::spawn(move || {
+            let mut guard = mutex.lock().unwrap();
+
+            while *guard != i {
+                guard = cv.wait(guard).unwrap();
+                println!("Thread {} wakes", i);
+            }
+
+            println!("Thread {} finishing", i);
+        });
+    }
+
+    for i in 0 .. n {
+        wait_for_enter();
+        *mutex.lock().unwrap() = i;
+        cv.notify_all();
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 const SEATS: usize = 3;
 const HAIRCUT_MIN: u64 = 1000;
 const HAIRCUT_MAX: u64 = 1000;
-const ARRIVAL_MIN: u64 = 250;
-const ARRIVAL_MAX: u64 = 750;
+const ARRIVAL_MIN: u64 = 1250;
+const ARRIVAL_MAX: u64 = 1750;
 
 fn sleeping_barber() {
-    use semaphore::Semaphore;
-
     let free_seats      = Arc::new(Mutex::new(SEATS));
     let customers_ready = Arc::new(Semaphore::new(0));
     let barber_ready    = Arc::new(Semaphore::new(0));
@@ -199,8 +229,8 @@ fn sleeping_barber() {
 
         thread::spawn(move|| {
             loop {
-                customers_ready.lower();
                 barber_ready.raise();
+                customers_ready.lower();
                 *free_seats.lock().unwrap() += 1;
 
                 println!("Barber begins cutting");
@@ -239,6 +269,63 @@ fn sleeping_barber() {
     });
 }
 
+fn sleeping_barber_2() {
+    let seats: Arc<Mutex<LinkedList<(usize, Arc<Semaphore>)>>>
+        = Arc::new(Mutex::new(LinkedList::new()));
+    let customers_ready: Arc<Semaphore>
+        = Arc::new(Semaphore::new(0));
+
+    // Barber
+    {
+        let seats        = seats.clone();
+        let customers_ready = customers_ready.clone();
+
+        thread::spawn(move|| {
+            loop {
+                customers_ready.lower();
+                let (i, ready) = seats.lock().unwrap().pop_front().unwrap();
+
+                println!("Barber begins cutting customer {}", i);
+                ready.raise();
+
+                random_sleep(HAIRCUT_MIN, HAIRCUT_MAX);
+
+                println!("Barber finishes cutting customer {}", i);
+            }
+        });
+    }
+
+    thread::spawn(move|| {
+        for i in 0 .. {
+            random_sleep(ARRIVAL_MIN, ARRIVAL_MAX);
+
+            let seats = seats.clone();
+            let customers_ready = customers_ready.clone();
+
+            thread::spawn(move|| {
+                let barber_ready: Arc<Semaphore>;
+
+                {
+                    let mut seats = seats.lock().unwrap();
+
+                    if seats.len() == SEATS {
+                        println!("Customer {} gives up", i);
+                        return;
+                    } else {
+                        println!("Customer {} sits down", i);
+                        barber_ready = Arc::new(Semaphore::new(0));
+                        seats.push_back((i, barber_ready.clone()));
+                        customers_ready.raise();
+                    }
+                }
+
+                barber_ready.lower();
+                println!("Customer {} begins getting cut", i);
+            });
+        }
+    });
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 fn main() {
@@ -248,7 +335,9 @@ fn main() {
 
     // dining_philosophers(5);
 
-    sleeping_barber();
+    // condvar_demo(5);
+
+    sleeping_barber_2();
 
     wait_for_enter();
 }

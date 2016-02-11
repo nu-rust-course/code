@@ -1,42 +1,42 @@
 use std::sync::{Mutex, Condvar};
 
 pub struct Semaphore {
-    lock: Mutex<usize>,
-    cv:   Condvar,
+    counter: Mutex<usize>,
+    condvar: Condvar,
 }
 
 impl Semaphore {
-    pub fn new(value: usize) -> Self {
+    pub fn new(count: usize) -> Self
+    {
         Semaphore {
-            lock: Mutex::new(value),
-            cv:   Condvar::new(),
+            counter: Mutex::new(count),
+            condvar: Condvar::new(),
         }
     }
 
     pub fn raise(&self) {
-        let mut guard = self.lock.lock().unwrap();
-        *guard += 1;
-        self.cv.notify_one();
+        *self.counter.lock().unwrap() += 1;
+        self.condvar.notify_one();
     }
 
     pub fn lower(&self) {
-        let mut guard = self.lock.lock().unwrap();
+        let mut guard = self.counter.lock().unwrap();
 
         while *guard == 0 {
-            guard = self.cv.wait(guard).unwrap();
+            guard = self.condvar.wait(guard).unwrap();
         }
 
         *guard -= 1;
     }
 
-    pub fn try_lower(&self) -> Option<()> {
-        let mut guard = self.lock.lock().unwrap();
+    pub fn try_lower(&self) -> bool {
+        let mut guard = self.counter.lock().unwrap();
 
         if *guard == 0 {
-            None
+            false
         } else {
             *guard -= 1;
-            Some(())
+            true
         }
     }
 }
