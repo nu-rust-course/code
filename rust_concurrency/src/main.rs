@@ -6,6 +6,7 @@ use std::collections::LinkedList;
 use std::fmt::{self, Display};
 use std::io::{self,Write};
 use std::sync::{Arc,Condvar,Mutex};
+use std::sync::mpsc::{channel, sync_channel, Sender};
 use std::thread;
 use std::time::Duration;
 
@@ -328,6 +329,51 @@ fn sleeping_barber_2() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+const NBARBERS: usize = 3;
+
+fn sleeping_barbers() {
+    type Message = (usize, Sender<usize>);
+    let (queue_back, queue_front) = sync_channel::<Message>(SEATS);
+    let queue_front = Arc::new(Mutex::new(queue_front));
+
+    for j in 0 .. NBARBERS {
+        let queue_front = queue_front.clone();
+
+        thread::spawn(move || {
+            let (i, response) = queue_front.lock().unwrap().recv().unwrap();
+            response.send(j).unwrap();
+            println!("Barber {} begins customer {}", j, i);
+            random_sleep(HAIRCUT_MIN, HAIRCUT_MAX);
+            println!("Barber {} finishes customer {}", j, i);
+            response.send(j).unwrap();
+        });
+    }
+
+    thread::spawn(move || {
+        for i in 0 .. {
+            random_sleep(ARRIVAL_MIN, ARRIVAL_MAX);
+
+            let queue_back = queue_back.clone();
+
+            thread::spawn(move || {
+                let (response_send, response_recv) = channel();
+
+                if let Ok(_) = queue_back.try_send((i, response_send)) {
+                    println!("Customer {} sits down", i);
+                    let j = response_recv.recv().unwrap();
+                    println!("Customer {} being cut by barber {}", i, j);
+                    response_recv.recv().unwrap();
+                    println!("Customer {} done", i);
+                } else {
+                    println!("Customer {} gives up", i);
+                }
+            });
+        }
+    });
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 fn main() {
     // n_counters(5);
     // refcounting();
@@ -338,7 +384,8 @@ fn main() {
     // condvar_demo(5);
 
     // sleeping_barber();
-    sleeping_barber_2();
+    // sleeping_barber_2();
+    sleeping_barbers();
 
     wait_for_enter();
 }
