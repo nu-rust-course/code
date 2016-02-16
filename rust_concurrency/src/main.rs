@@ -6,7 +6,6 @@ use std::collections::LinkedList;
 use std::fmt::{self, Display};
 use std::io::{self,Write};
 use std::sync::{Arc,Condvar,Mutex};
-use std::sync::mpsc::{channel,sync_channel,Sender};
 use std::thread;
 use std::time::Duration;
 
@@ -327,110 +326,6 @@ fn sleeping_barber_2() {
     });
 }
 
-fn sleeping_barber_3() {
-    let (queue_back, queue_front) = sync_channel::<usize>(0);
-    let free_seats = Arc::new(Mutex::new(SEATS));
-
-    // Barber
-    {
-        let free_seats = free_seats.clone();
-
-        thread::spawn(move|| {
-            for i in queue_front {
-                *free_seats.lock().unwrap() += 1;
-
-                println!("Barber begins cutting customer {}", i);
-                random_sleep(HAIRCUT_MIN, HAIRCUT_MAX);
-                println!("Barber finishes cutting customer {}", i);
-            }
-        });
-    }
-
-    thread::spawn(move|| {
-        for i in 0 .. {
-            random_sleep(ARRIVAL_MIN, ARRIVAL_MAX);
-
-            let free_seats = free_seats.clone();
-            let queue_back = queue_back.clone();
-
-            thread::spawn(move|| {
-                {
-                    let mut free_seats = free_seats.lock().unwrap();
-
-                    if *free_seats == 0 {
-                        println!("Customer {} gives up", i);
-                        return;
-                    } else {
-                        println!("Customer {} sits down", i);
-                        *free_seats -= 1;
-                    }
-                }
-
-                queue_back.send(i).unwrap();
-                println!("Customer {} begins getting cut", i);
-            });
-        }
-    });
-}
-
-const NBARBERS: usize = 3;
-
-fn sleeping_barbers() {
-    type Message = (usize, Sender<usize>);
-    let (queue_back, queue_front) = sync_channel::<Message>(0);
-    let queue_front = Arc::new(Mutex::new(queue_front));
-    let free_seats  = Arc::new(Mutex::new(SEATS));
-
-    for j in 0 .. NBARBERS {
-        let queue_front = queue_front.clone();
-        let free_seats  = free_seats.clone();
-
-        thread::spawn(move|| {
-            loop {
-                let (i, done) = queue_front.lock().unwrap().recv().unwrap();
-                *free_seats.lock().unwrap() += 1;
-
-                println!("Barber {} begins customer {}", j, i);
-                random_sleep(HAIRCUT_MIN, HAIRCUT_MAX);
-                done.send(j).unwrap();
-                println!("Barber {} finishes customer {}", j, i);
-            }
-        });
-    }
-
-    thread::spawn(move|| {
-        for i in 0 .. {
-            random_sleep(ARRIVAL_MIN, ARRIVAL_MAX);
-
-            let queue_back = queue_back.clone();
-            let free_seats = free_seats.clone();
-
-            thread::spawn(move|| {
-                {
-                    let mut free_seats = free_seats.lock().unwrap();
-
-                    if *free_seats == 0 {
-                        println!("Customer {} gives up", i);
-                        return;
-                    } else {
-                        println!("Customer {} sits down", i);
-                        *free_seats -= 1;
-                    }
-                }
-
-                let (done_send, done_recv) = channel();
-
-                queue_back.send((i, done_send)).unwrap();
-                println!("Customer {} begins getting cut", i);
-
-                let j = done_recv.recv().unwrap();
-                println!("Customer {} finished getting cut by barber {}",
-                         i, j);
-            });
-        }
-    });
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 
 fn main() {
@@ -443,10 +338,7 @@ fn main() {
     // condvar_demo(5);
 
     // sleeping_barber();
-    // sleeping_barber_2();
-    // sleeping_barber_3();
-
-    sleeping_barbers();
+    sleeping_barber_2();
 
     wait_for_enter();
 }
