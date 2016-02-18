@@ -14,12 +14,10 @@ template <typename T>
 class Optimistic_list_set : public N_lock_list_set<T>
 {
 protected:
-    using super   = N_lock_list_set<T>;
-    using Node    = typename super::Node;
-    using link_t  = typename super::link_t;
-    using guard_t = typename super::guard_t;
-
-    link_t& link_ = super::link_;
+    using super = N_lock_list_set<T>;
+    using typename super::Node;
+    using typename super::guard_t;
+    using super::link_;
 
     bool validate(const Node* prev, const Node* curr) const
     {
@@ -69,7 +67,7 @@ public:
                 if (super::matches(prev, key)) return false;
 
                 std::unique_ptr<Node> new_node{new Node{}};
-                new_node->element = key;
+                new_node->element = std::move(key);
                 new_node->next    = std::move(prev.next);
                 prev.next         = std::move(new_node);
 

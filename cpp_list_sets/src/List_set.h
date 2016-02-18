@@ -78,7 +78,7 @@ public:
         if (matches(prev, key)) return false;
 
         std::unique_ptr<Node> new_node{new Node{}};
-        new_node->element = key;
+        new_node->element = std::move(key);
         new_node->next    = std::move(prev.next);
         prev.next         = std::move(new_node);
 

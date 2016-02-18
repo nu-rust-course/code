@@ -2,8 +2,17 @@
 
 #include "N_lock_list_set.h"
 
-class HoH_list_set : public N_lock_list_set
+#undef Set
+#define Set HoH_list_set
+
+template<typename T>
+class HoH_list_set : public N_lock_list_set<T>
 {
+    using super = N_lock_list_set<T>;
+    using typename super::Node;
+    using typename super::guard_t;
+    using super::link_;
+
     // Like `find_predecessor`, finds the predecessor node of the first node
     // whose element is not less than `key`. Performs hand-over-hand
     // locking, with the postcondition that the mutexes on both the result node
@@ -20,13 +29,11 @@ class HoH_list_set : public N_lock_list_set
 
         while (!ptr->next->is_last() && key > ptr->next->element) {
             curr = std::move(next);
+            next = guard_t{ptr->next->next->lock};
             ptr  = &*ptr->next;
-            next = guard_t{ptr->next->lock};
         }
 
         return {ptr, std::move(curr), std::move(next)};
     }
 };
 
-
-#endif //LISTSET_HOH_LIST_SET_H
