@@ -48,7 +48,7 @@ protected:
 
     // Like `find_predecessor`, finds the predecessor node of the first node
     // whose element is not less than `key`. Performs hand-over-hand
-    // locking, with the postcondition that the mutexs on both the result node
+    // locking, with the postcondition that the mutexes on both the result node
     // and its successor are held, guaranteeing that neither is deleted.
     // Returns a triple of the reference to the predecessor node, the guard
     // for that node, and the guard for its successor. Destruction of the
@@ -57,16 +57,14 @@ protected:
     find_predecessor_locking(const T& key) const
     {
         Node* ptr = &*link_;
-        guard_t curr{ptr->lock};
-        guard_t next{ptr->next->lock};
+        guard_t guard{ptr->lock};
 
         while (!ptr->next->is_last() && key > ptr->next->element) {
-            curr = std::move(next);
+            guard = guard_t{ptr->next->lock};
             ptr  = &*ptr->next;
-            next = guard_t{ptr->next->lock};
         }
 
-        return {ptr, std::move(curr), std::move(next)};
+        return {ptr, std::move(guard), guard_t{}};
     }
 
     bool matches(const Node& prev, const T& key) const

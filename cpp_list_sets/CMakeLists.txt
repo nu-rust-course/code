@@ -8,6 +8,7 @@ add_test_program(Set_tests test/Set_tests.cpp
         src/List_set.h
         src/One_lock_list_set.h
         src/N_lock_list_set.h
+        src/HoH_list_set.h
         src/Optimistic_list_set.h
         src/Lazy_list_set.h
         )
