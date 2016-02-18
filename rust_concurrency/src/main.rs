@@ -6,7 +6,7 @@ use std::collections::LinkedList;
 use std::fmt::{self, Display};
 use std::io::{self,Write};
 use std::sync::{Arc,Condvar,Mutex};
-use std::sync::mpsc::{channel, sync_channel, Sender};
+use std::sync::mpsc::{sync_channel, SyncSender};
 use std::thread;
 use std::time::Duration;
 
@@ -214,8 +214,8 @@ fn condvar_demo(n: usize) {
 const SEATS: usize = 3;
 const HAIRCUT_MIN: u64 = 500;
 const HAIRCUT_MAX: u64 = 1000;
-const ARRIVAL_MIN: u64 = 250;
-const ARRIVAL_MAX: u64 = 750;
+const ARRIVAL_MIN: u64 = 150;
+const ARRIVAL_MAX: u64 = 250;
 
 fn sleeping_barber() {
     let free_seats      = Arc::new(Mutex::new(SEATS));
@@ -332,7 +332,8 @@ fn sleeping_barber_2() {
 const NBARBERS: usize = 3;
 
 fn sleeping_barbers() {
-    type Message = (usize, Sender<usize>);
+    // protocol: C:usize; B:usize; B:()
+    type Message = (usize, SyncSender<usize>);
     let (queue_back, queue_front) = sync_channel::<Message>(SEATS);
     let queue_front = Arc::new(Mutex::new(queue_front));
 
@@ -340,12 +341,15 @@ fn sleeping_barbers() {
         let queue_front = queue_front.clone();
 
         thread::spawn(move || {
-            let (i, response) = queue_front.lock().unwrap().recv().unwrap();
-            response.send(j).unwrap();
-            println!("Barber {} begins customer {}", j, i);
-            random_sleep(HAIRCUT_MIN, HAIRCUT_MAX);
-            println!("Barber {} finishes customer {}", j, i);
-            response.send(j).unwrap();
+            loop {
+                let (i, response) = queue_front.lock().unwrap().recv().unwrap();
+
+                println!("Barber {} begins customer {}", j, i);
+                response.send(j).unwrap();
+                random_sleep(HAIRCUT_MIN, HAIRCUT_MAX);
+                response.send(j).unwrap();
+                println!("Barber {} finishes customer {}", j, i);
+            }
         });
     }
 
@@ -356,7 +360,7 @@ fn sleeping_barbers() {
             let queue_back = queue_back.clone();
 
             thread::spawn(move || {
-                let (response_send, response_recv) = channel();
+                let (response_send, response_recv) = sync_channel(0);
 
                 if let Ok(_) = queue_back.try_send((i, response_send)) {
                     println!("Customer {} sits down", i);
