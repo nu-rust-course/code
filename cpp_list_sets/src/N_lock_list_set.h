@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Set_base.h"
+#include "List_set.h"
 
 #include <iostream>
 #include <memory>
@@ -18,15 +19,13 @@ protected:
     using link_t  = std::unique_ptr<Node>;
     using guard_t = std::unique_lock<std::mutex>;
 
-    struct Node {
+    struct Node : public Node_base<T> {
         T          element;
         link_t     next;
         std::mutex lock;
 
-        bool is_last()
-        {
-            return next == nullptr;
-        }
+        const T& get_element() const { return element; }
+        const Node* get_next() const { return &*next; }
     };
 
     // Head of the list
@@ -70,6 +69,11 @@ protected:
         return {ptr, std::move(curr), std::move(next)};
     }
 
+    bool matches(const Node& prev, const T& key) const
+    {
+        return !prev.next->is_last() && prev.next->element  == key;
+    }
+
 public:
     N_lock_list_set()
     {
@@ -83,56 +87,40 @@ public:
 
     virtual bool member(const T& key) const override
     {
-        auto& pred = find_predecessor(key);
-
-        if (pred.next->is_last()) return false;
-
-        return pred.next->element == key;
+        auto& prev = find_predecessor(key);
+        return matches(prev, key);
     }
 
     virtual bool remove(const T& key) override
     {
-        Node* pred;
+        Node* prev;
         guard_t g1, g2;
-        std::tie(pred, g1, g2) = find_predecessor_locking(key);
+        std::tie(prev, g1, g2) = find_predecessor_locking(key);
 
-        if (pred->next->is_last() || pred->next->element != key)
-            return false;
+        if (! matches(*prev, key)) return false;
 
-        pred->next = std::move(pred->next->next);
+        prev->next = std::move(prev->next->next);
         return true;
     }
 
     virtual bool insert(T key) override
     {
-        Node* pred;
+        Node* prev;
         guard_t g1, g2;
-        std::tie(pred, g1, g2) = find_predecessor_locking(key);
+        std::tie(prev, g1, g2) = find_predecessor_locking(key);
 
-        if (!pred->next->is_last() && pred->next->element == key)
-            return false;
+        if (matches(*prev, key)) return false;
 
         std::unique_ptr<Node> new_node{new Node{}};
         new_node->element = key;
-        new_node->next    = std::move(pred->next);
-        pred->next        = std::move(new_node);
+        new_node->next    = std::move(prev->next);
+        prev->next        = std::move(new_node);
 
         return true;
     }
 
-    virtual std::ostream& format_to(std::ostream& os) const override
+    virtual const Node_base<T>* head() const override
     {
-        Node* node = &*link_->next;
-
-        if (node->is_last())
-            return os << "{}";
-
-        os << "{ " << node->element;
-
-        for (node = &*node->next; !node->is_last(); node = &*node->next) {
-            os << ", " << node->element;
-        }
-
-        return os << " }";
+        return &*link_;
     }
 };

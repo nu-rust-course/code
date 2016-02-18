@@ -21,27 +21,38 @@ protected:
 
     link_t& link_ = super::link_;
 
-    bool validate(const Node* pred, const Node* succ)
+    bool validate(const Node* prev, const Node* curr) const
     {
-        for (Node* curr = &*link_; !curr->is_last(); curr = &*curr->next)
-            if (curr == pred) return (&*curr->next == succ);
+        for (const Node* node = &*link_; !node->is_last(); node = &*node->next)
+            if (node == prev) return (&*node->next == curr);
 
         return false;
     }
 
 public:
+    virtual bool member(const T& key) const override
+    {
+        for (;;) {
+            auto& prev = super::find_predecessor(key);
+            guard_t g1{prev.lock};
+            guard_t g2{prev.next->lock};
+
+            if (validate(&prev, &*prev.next))
+                return super::matches(prev, key);
+        }
+    }
+
     virtual bool remove(const T& key) override
     {
         for (;;) {
-            auto& pred = super::find_predecessor(key);
-            guard_t g1{pred.lock};
-            guard_t g2{pred.next->lock};
+            auto& prev = super::find_predecessor(key);
+            guard_t g1{prev.lock};
+            guard_t g2{prev.next->lock};
 
-            if (validate(&pred, &*pred.next)) {
-                if (pred.next->is_last() || pred.next->element != key)
-                    return false;
+            if (validate(&prev, &*prev.next)) {
+                if (!super::matches(prev, key)) return false;
 
-                pred.next = std::move(pred.next->next);
+                prev.next = std::move(prev.next->next);
                 return true;
             }
         }
@@ -50,18 +61,17 @@ public:
     virtual bool insert(T key) override
     {
         for (;;) {
-            auto& pred = super::find_predecessor(key);
-            guard_t g1{pred.lock};
-            guard_t g2{pred.next->lock};
+            auto& prev = super::find_predecessor(key);
+            guard_t g1{prev.lock};
+            guard_t g2{prev.next->lock};
 
-            if (validate(&pred, &*pred.next)) {
-                if (!pred.next->is_last() && pred.next->element == key)
-                    return false;
+            if (validate(&prev, &*prev.next)) {
+                if (super::matches(prev, key)) return false;
 
                 std::unique_ptr<Node> new_node{new Node{}};
                 new_node->element = key;
-                new_node->next    = std::move(pred.next);
-                pred.next         = std::move(new_node);
+                new_node->next    = std::move(prev.next);
+                prev.next         = std::move(new_node);
 
                 return true;
             }
