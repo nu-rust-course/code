@@ -29,6 +29,8 @@ public:
 
         return os << " }";
     }
+
+    virtual ~Set_base() { }
 };
 
 template <typename T>

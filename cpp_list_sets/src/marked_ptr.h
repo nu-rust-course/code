@@ -5,7 +5,7 @@
 #include <sys/types.h>
 
 template<typename T>
-class Marked_pointer
+class marked_ptr
 {
     // Representation:
     uintptr_t word_;
@@ -31,13 +31,13 @@ class Marked_pointer
     }
 
 public:
-    Marked_pointer() noexcept = default;
+    marked_ptr() noexcept = default;
 
-    Marked_pointer(std::nullptr_t) noexcept
-            : Marked_pointer{nullptr, false}
+    marked_ptr(std::nullptr_t) noexcept
+            : marked_ptr{nullptr, false}
     { }
 
-    Marked_pointer(T* ptr, bool mark) noexcept
+    marked_ptr(T* ptr, bool mark) noexcept
             : word_{pack(ptr, mark)}
     { }
 
@@ -51,13 +51,13 @@ public:
         return unpack_mark(word_);
     }
 
-    Marked_pointer& pointer(T* pointer)
+    marked_ptr& pointer(T* pointer)
     {
         word_ = pack(pointer, mark());
         return *this;
     }
 
-    Marked_pointer& mark(bool mark)
+    marked_ptr& mark(bool mark)
     {
         word_ = pack(pointer(), mark);
         return *this;
@@ -78,31 +78,31 @@ public:
         return pointer();
     }
 
-    bool operator==(const Marked_pointer& other)
+    bool operator==(const marked_ptr& other)
     {
         return word_ == other.word_;
     }
 
-    bool operator!=(const Marked_pointer& other)
+    bool operator!=(const marked_ptr& other)
     {
         return word_ != other.word_;
     }
 
 private:
-    friend class std::atomic<Marked_pointer<T>>;
+    friend class std::atomic<marked_ptr<T>>;
 
-    explicit Marked_pointer(uintptr_t word) noexcept : word_{word}
+    explicit marked_ptr(uintptr_t word) noexcept : word_{word}
     { }
 };
 
 template<typename T>
-class std::atomic<Marked_pointer<T>>
+class std::atomic<marked_ptr<T>>
 {
     // Representation:
     atomic<uintptr_t> base_;
 
 public:
-    using contents_t = Marked_pointer<T>;
+    using contents_t       = marked_ptr<T>;
 
     atomic() noexcept = default;
 
@@ -123,16 +123,22 @@ public:
     contents_t operator=(contents_t val) volatile noexcept
     { return contents_t{base_ = val.word_}; }
 
-    operator bool() noexcept
+    operator bool() const noexcept
     { return bool{load()}; }
 
     T& operator*() noexcept
     { return *load(); }
 
+    const T& operator*() const noexcept
+    { return *load(); }
+
     T* operator->() noexcept
     { return load().operator->(); }
 
-    bool is_lock_free() noexcept
+    const T* operator->() const noexcept
+    { return load().operator->(); }
+
+    bool is_lock_free() const noexcept
     { return base_.is_lock_free(); }
 
     void store(contents_t val, std::memory_order sync = std::memory_order_seq_cst) noexcept
@@ -147,10 +153,22 @@ public:
     contents_t load(std::memory_order sync = std::memory_order_seq_cst) volatile noexcept
     { return contents_t{base_.load(sync)}; }
 
-    operator contents_t() const noexcept
+    const contents_t load(std::memory_order sync = std::memory_order_seq_cst) const noexcept
+    { return contents_t{base_.load(sync)}; }
+
+    const contents_t load(std::memory_order sync = std::memory_order_seq_cst) const volatile noexcept
+    { return contents_t{base_.load(sync)}; }
+
+    operator contents_t() noexcept
     { return load(); }
 
-    operator contents_t() const volatile noexcept
+    operator contents_t() volatile noexcept
+    { return load(); }
+
+    operator const contents_t() const noexcept
+    { return load(); }
+
+    operator const contents_t() const volatile noexcept
     { return load(); }
 
     contents_t exchange(contents_t val, std::memory_order sync = std::memory_order_seq_cst) noexcept

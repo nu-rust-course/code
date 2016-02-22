@@ -1,18 +1,18 @@
-#include "Marked_pointer.h"
+#include "marked_ptr.h"
 
 #include <vector>
 #include <UnitTest++/UnitTest++.h>
 
 TEST(Construct)
 {
-    Marked_pointer<int> mp;
+    marked_ptr<int> mp;
 }
 
 TEST(FillAndChange)
 {
     int a = 8, b = 9;
 
-    Marked_pointer<int> mp{&a, false};
+    marked_ptr<int> mp{&a, false};
 
     CHECK_EQUAL(&a, mp.pointer());
     CHECK_EQUAL(a, *mp);
@@ -34,15 +34,15 @@ TEST(OperatorArrow)
 {
     std::vector<int> v{1, 2, 3};
 
-    Marked_pointer<std::vector<int>> mp{&v, true};
+    marked_ptr<std::vector<int>> mp{&v, true};
 
     CHECK_EQUAL(3, mp->size());
 }
 
 TEST(ConstructAndAssignAtomic)
 {
-    int                              a = 9;
-    std::atomic<Marked_pointer<int>> amp{&a, true};
+    int                          a = 9;
+    std::atomic<marked_ptr<int>> amp{&a, true};
 
     CHECK_EQUAL(a,  *amp);
     CHECK_EQUAL(&a, &*amp);
