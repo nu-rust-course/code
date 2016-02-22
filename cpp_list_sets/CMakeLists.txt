@@ -12,3 +12,7 @@ add_test_program(Set_tests test/Set_tests.cpp
         src/Optimistic_list_set.h
         src/Lazy_list_set.h
         )
+
+add_test_program(Marked_pointer_tests
+        test/Marked_pointer_tests.cpp
+        src/Marked_pointer.h)
