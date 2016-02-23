@@ -4,6 +4,13 @@
 #include <cassert>
 #include <sys/types.h>
 
+#define SYNC  std::memory_order sync = std::memory_order_seq_cst
+
+/*
+ * This is really a utility class for atomic<marked_ptr<T>> below, which is
+ * the main event. The idea is that we want an atomic variable that holds
+ * both a pointer and a boolean “mark”. This class is non-atomic version.
+ */
 template<typename T>
 class marked_ptr
 {
@@ -20,7 +27,7 @@ class marked_ptr
         return (PTR_MASK & word) | (MARK_MASK & mark);
     }
 
-    static T* unpack_pointer(uintptr_t word) noexcept
+    static T* unpack_ptr(uintptr_t word) noexcept
     {
         return reinterpret_cast<T*>(word & PTR_MASK);
     }
@@ -41,9 +48,9 @@ public:
             : word_{pack(ptr, mark)}
     { }
 
-    T* pointer() const noexcept
+    T* ptr() const noexcept
     {
-        return unpack_pointer(word_);
+        return unpack_ptr(word_);
     }
 
     bool mark() const noexcept
@@ -51,31 +58,26 @@ public:
         return unpack_mark(word_);
     }
 
-    marked_ptr& pointer(T* pointer)
+    marked_ptr& ptr(T* ptr)
     {
-        word_ = pack(pointer, mark());
+        word_ = pack(ptr, mark());
         return *this;
     }
 
     marked_ptr& mark(bool mark)
     {
-        word_ = pack(pointer(), mark);
+        word_ = pack(ptr(), mark);
         return *this;
-    }
-
-    operator bool() const noexcept
-    {
-        return mark();
     }
 
     T& operator*() const noexcept
     {
-        return *pointer();
+        return *ptr();
     }
 
     T* operator->() const noexcept
     {
-        return pointer();
+        return ptr();
     }
 
     bool operator==(const marked_ptr& other)
@@ -99,10 +101,10 @@ template<typename T>
 class std::atomic<marked_ptr<T>>
 {
     // Representation:
-    atomic<uintptr_t> base_;
+    atomic <uintptr_t> base_;
 
 public:
-    using contents_t       = marked_ptr<T>;
+    using contents_t = marked_ptr<T>;
 
     atomic() noexcept = default;
 
@@ -110,103 +112,127 @@ public:
 
     atomic& operator=(const atomic&) = delete;
 
-    atomic& operator=(const atomic&) volatile = delete;
-
-    template <typename... Args>
+    // Forward any marked_ptr constructor arguments.
+    template<typename... Args>
     atomic(Args... args) noexcept
-        : base_{contents_t{args...}.word_}
+            : base_{contents_t{std::forward(args)...}.word_}
     { }
 
-    contents_t operator=(contents_t val) noexcept
-    { return contents_t{base_ = val.word_}; }
+    // Assign from a marked_ptr.
+    contents_t operator=(contents_t val) noexcept {
+        return contents_t{base_ = val.word_};
+    }
 
-    contents_t operator=(contents_t val) volatile noexcept
-    { return contents_t{base_ = val.word_}; }
+    bool is_lock_free() const noexcept {
+        return base_.is_lock_free();
+    }
 
-    operator bool() const noexcept
-    { return bool{load()}; }
+    contents_t load(SYNC) const noexcept
+    {
+        return contents_t{base_.load(sync)};
+    }
 
-    T& operator*() noexcept
-    { return *load(); }
+    operator contents_t() const noexcept
+    {
+        return load();
+    }
 
-    const T& operator*() const noexcept
-    { return *load(); }
+    T* ptr(SYNC) const noexcept
+    {
+        return load().ptr();
+    }
 
-    T* operator->() noexcept
-    { return load().operator->(); }
+    T& operator*() const noexcept {
+        return *this->ptr();
+    }
 
-    const T* operator->() const noexcept
-    { return load().operator->(); }
+    T* operator->() const noexcept {
+        return this->ptr();
+    }
 
-    bool is_lock_free() const noexcept
-    { return base_.is_lock_free(); }
+    bool mark(SYNC) const noexcept
+    {
+        return load().mark();
+    }
 
-    void store(contents_t val, std::memory_order sync = std::memory_order_seq_cst) noexcept
-    { base_.store(val.word_, sync); }
+    void store(contents_t val, SYNC) noexcept
+    {
+        base_.store(val.word_, sync);
+    }
 
-    void store(contents_t val, std::memory_order sync = std::memory_order_seq_cst) volatile noexcept
-    { base_.store(val.word_, sync); }
+    void ptr(T* ptr, SYNC) noexcept
+    {
+        store({ptr, mark()}, sync);
+    }
 
-    contents_t load(std::memory_order sync = std::memory_order_seq_cst) noexcept
-    { return contents_t{base_.load(sync)}; }
+    void mark(bool mark, SYNC) noexcept
+    {
+        store({ptr(), mark}, sync);
+    }
 
-    contents_t load(std::memory_order sync = std::memory_order_seq_cst) volatile noexcept
-    { return contents_t{base_.load(sync)}; }
+    contents_t exchange(contents_t val, SYNC) noexcept
+    {
+        return contents_t{base_.exchange(val.word_, sync)};
+    }
 
-    const contents_t load(std::memory_order sync = std::memory_order_seq_cst) const noexcept
-    { return contents_t{base_.load(sync)}; }
-
-    const contents_t load(std::memory_order sync = std::memory_order_seq_cst) const volatile noexcept
-    { return contents_t{base_.load(sync)}; }
-
-    operator contents_t() noexcept
-    { return load(); }
-
-    operator contents_t() volatile noexcept
-    { return load(); }
-
-    operator const contents_t() const noexcept
-    { return load(); }
-
-    operator const contents_t() const volatile noexcept
-    { return load(); }
-
-    contents_t exchange(contents_t val, std::memory_order sync = std::memory_order_seq_cst) noexcept
-    { return contents_t{base_.exchange(val.word_, sync)}; }
-
-    contents_t exchange(contents_t val, std::memory_order sync = std::memory_order_seq_cst) volatile noexcept
-    { return contents_t{base_.exchange(val.word_, sync)}; }
-
-    bool compare_exchange_weak(contents_t& expected, contents_t val,
-                               std::memory_order sync = std::memory_order_seq_cst) noexcept
-    { return base_.compare_exchange_weak(expected.word_, val.word_, sync); }
+    bool compare_exchange_weak(contents_t& expected, contents_t val, SYNC) noexcept
+    {
+        return base_.compare_exchange_weak(expected.word_, val.word_, sync);
+    }
 
     bool compare_exchange_weak(contents_t& expected, contents_t val,
-                               std::memory_order sync = std::memory_order_seq_cst) volatile noexcept
-    { return base_.compare_exchange_weak(expected.word_, val.word_, sync); }
+                               std::memory_order success,
+                               std::memory_order failure) noexcept
+    {
+        return base_.compare_exchange_weak(expected.word_, val.word_, success,
+                                           failure);
+    }
 
-    bool compare_exchange_weak(contents_t& expected, contents_t val,
-                               std::memory_order success, std::memory_order failure) noexcept
-    { return base_.compare_exchange_weak(expected.word_, val.word_, success, failure); }
-
-    bool compare_exchange_weak(contents_t& expected, contents_t val,
-                               std::memory_order success, std::memory_order failure) volatile noexcept
-    { return base_.compare_exchange_weak(expected.word_, val.word_, success, failure); }
-
-    bool compare_exchange_strong(contents_t& expected, contents_t val,
-                                 std::memory_order sync = std::memory_order_seq_cst) noexcept
-    { return base_.compare_exchange_strong(expected.word_, val.word_, sync); }
+    bool compare_exchange_strong(contents_t& expected, contents_t val, SYNC) noexcept
+    {
+        return base_.compare_exchange_strong(expected.word_, val.word_, sync);
+    }
 
     bool compare_exchange_strong(contents_t& expected, contents_t val,
-                                 std::memory_order sync = std::memory_order_seq_cst) volatile noexcept
-    { return base_.compare_exchange_strong(expected.word_, val.word_, sync); }
+                                 std::memory_order success,
+                                 std::memory_order failure) noexcept
+    {
+        return base_.compare_exchange_strong(expected.word_, val.word_, success,
+                                             failure);
+    }
 
-    bool compare_exchange_strong(contents_t& expected, contents_t val,
-                                 std::memory_order success, std::memory_order failure) noexcept
-    { return base_.compare_exchange_strong(expected.word_, val.word_, success, failure); }
+    bool compare_and_set_weak(T* old_ptr, T* new_ptr,
+                              bool old_mark, bool new_mark, SYNC) noexcept
+    {
+        contents_t expected{old_ptr, old_mark};
+        return compare_exchange_weak(expected, {new_ptr, new_mark}, sync);
+    }
 
-    bool compare_exchange_strong(contents_t& expected, contents_t val,
-                                 std::memory_order success, std::memory_order failure) volatile noexcept
-    { return base_.compare_exchange_strong(expected.word_, val.word_, success, failure); }
+    bool compare_and_set_weak(T* old_ptr, T* new_ptr,
+                              bool old_mark, bool new_mark,
+                              std::memory_order success,
+                              std::memory_order failure) noexcept
+    {
+        contents_t expected{old_ptr, old_mark};
+        return compare_exchange_weak(expected, {new_ptr, new_mark},
+                                     success, failure);
+    }
+
+    bool compare_and_set_strong(T* old_ptr, T* new_ptr,
+                                bool old_mark, bool new_mark, SYNC) noexcept
+    {
+        contents_t expected{old_ptr, old_mark};
+        return compare_exchange_strong(expected, {new_ptr, new_mark}, sync);
+    }
+
+    bool compare_and_set_strong(T* old_ptr, T* new_ptr,
+                                bool old_mark, bool new_mark,
+                                std::memory_order success,
+                                std::memory_order failure) noexcept
+    {
+        contents_t expected{old_ptr, old_mark};
+        return compare_exchange_strong(expected, {new_ptr, new_mark},
+                                       success, failure);
+    }
+
 };
-
