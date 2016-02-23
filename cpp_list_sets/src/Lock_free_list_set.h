@@ -59,8 +59,8 @@ protected:
     {
         retry:
 
-        Node* prev = link_.load().ptr();
-        Node* curr = prev->link.load().ptr();
+        Node* prev = link_.ptr();
+        Node* curr = prev->link.ptr();
 
         for (;;) {
             while (curr->get_mark()) {
