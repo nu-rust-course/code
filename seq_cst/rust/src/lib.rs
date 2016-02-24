@@ -18,17 +18,20 @@ impl SharedVars {
         }
     }
 
+    #[inline]
     fn left(&self, order: Ordering) -> isize {
         self.x.store(1, order);
         self.y.load(order)
     }
 
+    #[inline]
     fn right(&self, order: Ordering) -> isize {
         self.y.store(1, order);
         self.x.load(order)
     }
 }
 
+#[inline]
 fn run(order: Ordering) -> (isize, isize) {
     let shared_l = Arc::new(SharedVars::new());
     let shared_r = shared_l.clone();
@@ -43,6 +46,7 @@ fn is_valid(l: isize, r: isize) -> bool {
     (l == 0 && r == 1) || (l == 1 && r == 0) || (l == 1 && r == 1)
 }
 
+#[inline]
 fn search(n: usize, order: Ordering) -> Option<(isize, isize)> {
     for _ in 0 .. n {
         let (l, r) = run(order);
