@@ -1,13 +1,15 @@
 // C++ rendering of seq_cst.cpp
 // Searches for sequentially inconsistent behavior.
 
-#include <iostream>
-#include <thread>
+#include "Run_example.h"
 
-class Example
+#include <iostream>
+
+struct Data_race_example
 {
-    int x = 0;
-    int y = 0;
+    int x{0};
+    int y{0};
+
     int l = -1;
     int r = -1;
 
@@ -30,36 +32,13 @@ class Example
                (l == 1 && r == 1);
     }
 
-public:
-    Example()
+    void fmt(std::ostream& os) const
     {
-        std::thread tl([&]() { left(); });
-        std::thread tr([&]() { right(); });
-
-        tl.join();
-        tr.join();
-    }
-
-    static Example search()
-    {
-        for (;;) {
-            Example e;
-            if (!e.is_valid()) return e;
-        }
-    }
-
-    std::ostream& fmt(std::ostream& o) const
-    {
-        return o << "l == " << l << " && r == " << r;
+        os << "l == " << l << " && r == " << r;
     }
 };
 
-std::ostream& operator<<(std::ostream& o, const Example& e)
-{
-    return e.fmt(o);
-}
-
 int main()
 {
-    std::cout << Example::search() << '\n';
+    std::cout << Run_example<Data_race_example>() << '\n';
 }
