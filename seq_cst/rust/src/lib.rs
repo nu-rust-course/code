@@ -1,38 +1,38 @@
 #![allow(dead_code)]
 
 use std::sync::Arc;
-use std::sync::atomic::AtomicIsize;
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::thread;
 
 struct SharedVars {
-    x: AtomicIsize,
-    y: AtomicIsize,
+    x: AtomicUsize,
+    y: AtomicUsize,
 }
 
 impl SharedVars {
     fn new() -> Self {
         SharedVars {
-            x: AtomicIsize::new(0),
-            y: AtomicIsize::new(0),
+            x: AtomicUsize::new(0),
+            y: AtomicUsize::new(0),
         }
     }
 
     #[inline]
-    fn left(&self, order: Ordering) -> isize {
+    fn left(&self, order: Ordering) -> usize {
         self.x.store(1, order);
         self.y.load(order)
     }
 
     #[inline]
-    fn right(&self, order: Ordering) -> isize {
+    fn right(&self, order: Ordering) -> usize {
         self.y.store(1, order);
         self.x.load(order)
     }
 }
 
 #[inline]
-fn run(order: Ordering) -> (isize, isize) {
+fn run(order: Ordering) -> (usize, usize) {
     let shared_l = Arc::new(SharedVars::new());
     let shared_r = shared_l.clone();
 
@@ -42,12 +42,12 @@ fn run(order: Ordering) -> (isize, isize) {
     (handle_l.join().unwrap(), handle_r.join().unwrap())
 }
 
-fn is_valid(l: isize, r: isize) -> bool {
+fn is_valid(l: usize, r: usize) -> bool {
     (l == 0 && r == 1) || (l == 1 && r == 0) || (l == 1 && r == 1)
 }
 
 #[inline]
-fn search(n: usize, order: Ordering) -> Option<(isize, isize)> {
+fn search(n: usize, order: Ordering) -> Option<(usize, usize)> {
     for _ in 0 .. n {
         let (l, r) = run(order);
 
