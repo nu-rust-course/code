@@ -204,15 +204,52 @@ impl<T: Ord> SkipList<T> {
 
         // Now we've zeroed in on where it should go, and we have to
         // do a final search at the spine level.
-        while let Some(ref mut next) = links.spine {
-            match new.data.cmp(&next.data) {
-                Less    => unimplemented!(),
-                Equal   => unimplemented!(),
-                Greater => unimplemented!(),
+        while let Some(cmp) =
+            links.spine.as_ref().map(|spine| new.data.cmp(&spine.data))
+        {
+            match cmp {
+                Less    => {
+                    std::mem::swap(&mut new.links.spine, &mut links.spine);
+                    links.spine = Some(new);
+                    return None;
+                }
+
+                Equal   => {
+                    std::mem::swap(&mut new.links.spine, &mut links.spine);
+                    links.spine = Some(new);
+
+                }
+
+                Greater => {
+                    // let next =
+                    //     if let Some(ref mut next) = links.spine {next}
+                    //     else {unreachable!()};
+                    // links = &mut next.links;
+                }
             }
         }
 
+        links.spine = Some(new);
         None
+
+        // while let Some(cmp) = compare_data(&new, &links.spine) {
+        //     match cmp {
+        //         Less    => {
+        //             // Have:
+        //             //   new.links.spine == None
+        //             //   links.spine     == Some(ref next)
+        //             // Want:
+        //             //   new.links.spine == Some(ref next)
+        //             //   links.spine     == Some(new)
+        //             new.links.spine = Some(new)
+        //             // std::mem::swap(&mut links.spine, &mut new.links.spine);
+        //         }
+
+        //         Equal   => unimplemented!(),
+        //         Greater => unimplemented!(),
+        //     }
+        // }
+
     }
 
     // pub fn remove(&mut self, key: &T) -> Option<T> {
