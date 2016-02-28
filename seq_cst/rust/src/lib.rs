@@ -31,6 +31,8 @@ impl SharedVars {
     }
 }
 
+/// Runs one experiment, returning the values produced by left and right
+/// threads.
 #[inline]
 fn run(order: Ordering) -> (usize, usize) {
     let shared_l = Arc::new(SharedVars::new());
