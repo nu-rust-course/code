@@ -16,10 +16,12 @@ use std::mem;
 ///
 /// set.insert("this");
 /// ```
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Set<T> {
-    len:  usize,
+    // Having `head` field before `len` field means we get lexicographic
+    // order.
     head: Link<T>,
+    len:  usize,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -112,6 +114,46 @@ impl<T: Ord> Set<T> {
         result
     }
 
+    #[inline]
+    fn find(&self, key: &T) -> &Link<T> {
+        let mut pred = &self.head;
+
+        while let Some(ref curr) = pred.0 {
+            match key.cmp(&curr.data) {
+                Less    => return pred,
+                Equal   => return pred,
+                Greater => pred = &curr.link,
+            }
+        }
+
+        return pred;
+    }
+
+    #[inline]
+    fn find_mut(&mut self, key: &T) -> &mut Link<T> {
+        let mut cur = self.head.0.as_mut().map(|node| &mut **node);
+
+        loop {
+            match cur.map(|node| key.cmp(&node.data)) {
+                None => return &mut self.head,
+                _ => unimplemented!(),
+            }
+        }
+
+        /*
+        while let Some(ref mut curr) = pred.0 {
+            match key.cmp(&curr.data) {
+                Less    => unimplemented!(),
+                Equal   => unimplemented!(),
+                Greater => pred = &mut curr.link,
+            }
+        }
+
+        return pred;
+        */
+        unimplemented!();
+    }
+
     // pub fn lookup(&self, key, &T) -> Option<&T> {
     //     &self.
     // }
@@ -125,7 +167,6 @@ impl<T> Link<T> {
 
 impl<T: Ord> Link<T> {
     fn insert(&mut self, key: T) -> Option<T> {
-
         match self.0 {
             None => {
                 self.0 = Some(Box::new(Node {
@@ -135,45 +176,42 @@ impl<T: Ord> Link<T> {
 
                 None
             },
-            Some(ref mut box_node) => box_node.insert(key)
-        }
-    }
-}
+            Some(ref mut box_node) => {
+                let mut prev = box_node;
 
-impl<T: Ord> Node<T> {
-    fn insert(&mut self, mut key: T) -> Option<T> {
-        match key.cmp(&self.data) {
-            Less    => {
+                // match key.cmp(&prev.link.0.data) {
+                //     _ => None
+                // }
                 None
             }
-            Equal   => {
-                mem::swap(&mut key, &mut self.data);
-                Some(key)
-            }
-            Greater => self.link.insert(key),
         }
     }
 }
 
-impl<T: PartialEq> PartialEq for Set<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.head.eq(&other.head)
-    }
-}
+// impl<T: Ord> Node<T> {
+//     fn insert(&mut self, mut key: T) -> Option<T> {
+//         match key.cmp(&self.data) {
+//             Less    => {
+//                 let mut new = Box::new(Node {
+//                     data: key,
+//                     link: Link::new(),
+//                 });
+//                 /*
+//                     Have:
+//                         new
+//                         self.link
 
-impl<T: Eq> Eq for Set<T> {}
-
-impl<T: PartialOrd> PartialOrd for Set<T> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.head.partial_cmp(&other.head)
-    }
-}
-
-impl<T: Ord> Ord for Set<T> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.head.cmp(&other.head)
-    }
-}
+//                  */
+//                 unimplemented!()
+//             }
+//             Equal   => {
+//                 mem::swap(&mut key, &mut self.data);
+//                 Some(key)
+//             }
+//             Greater => self.link.insert(key),
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod insert_test {
