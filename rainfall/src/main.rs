@@ -21,7 +21,7 @@
  *     seven
  *     -9
  *
- * The input terminates with either EOF or a line 999.
+ * The input terminates with either end-of-file or a line "999".
  *
  * OUTPUT
  *
@@ -37,11 +37,11 @@
  * ASSUMPTIONS
  *
  *  - Numbers are read according to the language’s number reading
- *  routines, in particular the trait FromStr for type f64. This means
- *  that scientific notation ("3.4E22") is accepted, but hex is not.
+ *    routines, in particular the trait FromStr for type f64. This means
+ *    that scientific notation ("3.4E22") is accepted, but hex is not.
  *
  *  - A line containing more than one number is noise and should be
- *  ignored.
+ *    ignored.
  *
  *  - The terminator is a line of text "999", not a line of text that
  *    when interpreted is merely the number 999.0.
@@ -50,7 +50,7 @@
  *    line considered garbage.
  *
  *  - If there are no measurements to read then there is no mean value
- *    to print, so
+ *    to print, so we will print an explanatory message instead.
  */
 
 use std::io::{BufRead,BufReader,Read,stdin};
