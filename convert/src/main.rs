@@ -7,7 +7,7 @@ use std::io::Write;
 fn main() {
     let f = read_input();
     let c = f_to_c(f);
-    println!("{} °C", c);
+    println!("{} °F = {} °C", f, c);
 }
 
 /// Prompts the user and reads the input.
