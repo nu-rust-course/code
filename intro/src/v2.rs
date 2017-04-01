@@ -1,6 +1,7 @@
 //! 2-vectors of `f64`s. Not to be confused with `std::vec::Vec`, these
 //! are pairs representing 2-D vectors.
 
+use std::fmt::{Display, Formatter, Error};
 use std::ops::{Add, Mul, Neg, Sub};
 
 /// A 2-vector of `f64`s.
@@ -82,6 +83,18 @@ impl V2 {
     pub fn magnitude(&self) -> f64 {
         self.inner_product(self).sqrt()
     }
+}
+
+impl Display for V2 {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "⟨{}, {}⟩", self.x, self.y)
+    }
+}
+
+#[test]
+fn test_display() {
+    let v = V2::new(3., 4.);
+    assert_eq!("⟨3, 4⟩", format!("{}", &v));
 }
 
 impl Neg for V2 {
