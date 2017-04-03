@@ -84,7 +84,7 @@ fn read_measurements<R: Read>(reader: R) -> Vec<f64> {
 }
 
 #[cfg(test)]
-mod read_measurements_test {
+mod read_measurements_tests {
     use super::read_measurements;
     use std::io::Cursor;
 
@@ -127,8 +127,37 @@ fn calculate_results(fs: &[f64]) -> Results {
     }
 }
 
+#[cfg(test)]
+mod calculate_results_tests {
+    use super::calculate_results;
+
+    #[test]
+    fn given_example() {
+        let samples = [12.5, 18., 7., 0., 4.];
+        let result = calculate_results(&samples);
+        assert_eq!(8.3, result.mean);
+        assert_eq!(1, result.above);
+        assert_eq!(2, result.below);
+    }
+}
+
 fn mean(samples: &[f64]) -> f64 {
     sum(samples) / (samples.len() as f64)
+}
+
+#[cfg(test)]
+mod mean_tests {
+    use super::mean;
+
+    #[test]
+    fn mean_empty_is_nan() {
+        assert!(mean(&[]).is_nan());
+    }
+
+    #[test]
+    fn mean_2_3_4_is_3() {
+        assert_eq!(3.0, mean(&[2., 3., 4.]));
+    }
 }
 
 fn sum(samples: &[f64]) -> f64 {
