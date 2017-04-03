@@ -53,11 +53,11 @@
  *    to print, so we will print an explanatory message instead.
  */
 
-use std::io::{BufRead,BufReader,Read,stdin};
+use std::io::{BufRead,BufReader,Read,stdin,Write,stdout};
 
 fn main() {
     let measurements = read_measurements(stdin());
-    produce_output(&calculate_results(&measurements));
+    write_output(stdout(), &calculate_results(&measurements));
 }
 
 struct Results {
@@ -179,13 +179,38 @@ mod sum_tests {
     }
 }
 
-fn produce_output(r: &Results) {
+fn write_output<W: Write>(mut writer: W, r: &Results) {
   if r.mean.is_nan() {
-      println!("No measurements provided.");
+      write!(writer, "No measurements provided.\n").unwrap();
   } else {
-      println!("Mean rainfall: {} cm", r.mean);
-      println!("Below count:   {}", r.above);
-      println!("Above count:   {}", r.below);
+      write!(writer, "Mean rainfall: {} cm\n", r.mean).unwrap();
+      write!(writer, "Below count:   {}\n", r.below).unwrap();
+      write!(writer, "Above count:   {}\n", r.above).unwrap();
   }
 }
 
+#[cfg(test)]
+mod write_output_tests {
+    use super::{write_output, Results};
+    use std::io::Cursor;
+
+    #[test]
+    fn no_measurements_output() {
+        use std::f64::NAN;
+        assert_write("No measurements provided.\n",
+                     &Results { mean:  NAN, above: 0, below: 0 });
+    }
+
+    #[test]
+    fn some_measurements_output() {
+        assert_write(
+            "Mean rainfall: 5 cm\nBelow count:   3\nAbove count:   2\n",
+            &Results { mean:  5., above: 2, below: 3 });
+    }
+
+    fn assert_write(expected: &str, results: &Results) {
+        let mut writer = Cursor::new(vec![]);
+        write_output(&mut writer, results);
+        assert_eq!(expected.as_bytes(), &*writer.into_inner());
+    }
+}
