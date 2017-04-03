@@ -1,11 +1,11 @@
-default: test
-hard: test
+default:
+	@clear
+	@cargo test
+	@echo Enter to continue...
+	@read dummy
 
-test:
-	cargo test
-
-run:
-	cargo run
-
-build:
-	cargo build
+hard:
+	@clear
+	@cargo run
+	@echo Enter to continue...
+	@read dummy
