@@ -85,8 +85,8 @@ fn read_measurements<R: Read>(reader: R) -> Vec<f64> {
 
 #[cfg(test)]
 mod read_measurements_test {
-    use super::{read_measurements};
-    use std::io::{Read, Result};
+    use super::read_measurements;
+    use std::io::Cursor;
 
     #[test]
     fn reads_three_measurements() {
@@ -109,37 +109,9 @@ mod read_measurements_test {
     }
 
     fn assert_read(expected: &[f64], input: &str) {
-        let mock_read = StringReader::new(input.to_owned());
+        let mock_read = Cursor::new(input);
         let measurements = read_measurements(mock_read);
         assert_eq!(expected.to_owned(), measurements);
-    }
-
-    struct StringReader {
-        contents: Vec<u8>,
-        position: usize,
-    }
-
-    impl StringReader {
-        fn new(s: String) -> Self {
-            StringReader {
-                contents: s.into_bytes(),
-                position: 0,
-            }
-        }
-    }
-
-    impl Read for StringReader {
-        fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-            let mut count = 0;
-
-            while self.position < self.contents.len() && count < buf.len() {
-                buf[count] = self.contents[self.position];
-                count += 1;
-                self.position += 1;
-            }
-
-            return Ok(count);
-        }
     }
 }
 
