@@ -133,7 +133,9 @@ impl<T: Ord> Set<T> {
     ///
     /// ```
     /// # use intro::list_set::Set;
-    /// let set: Set<usize> = vec![3, 5, 4].into_iter().collect();
+    /// use std::iter::FromIterator;
+    ///
+    /// let set = Set::from_iter(vec![3, 5, 4]);
     ///
     /// assert!(!set.contains(&2));
     /// assert!( set.contains(&3));
@@ -550,9 +552,11 @@ impl<T: Ord> Set<T> {
     ///
     /// ```
     /// # use intro::list_set::Set;
-    /// let set1: Set<usize> = vec![1, 2].into_iter().collect();
-    /// let set2: Set<usize> = vec![3, 4].into_iter().collect();
-    /// let set3: Set<usize> = vec![1, 3].into_iter().collect();
+    /// use std::iter::FromIterator;
+    ///
+    /// let set1 = Set::from_iter(vec![1, 2]);
+    /// let set2 = Set::from_iter(vec![3, 4]);
+    /// let set3 = Set::from_iter(vec![1, 3]);
     ///
     /// assert!(!set1.is_disjoint(&set1));
     /// assert!( set1.is_disjoint(&set2));
@@ -585,9 +589,11 @@ impl<T: Ord> Set<T> {
     ///
     /// ```
     /// # use intro::list_set::Set;
-    /// let set1: Set<usize> = vec![2].into_iter().collect();
-    /// let set2: Set<usize> = vec![1, 2, 3].into_iter().collect();
-    /// let set3: Set<usize> = vec![1, 2, 3, 4].into_iter().collect();
+    /// use std::iter::FromIterator;
+    ///
+    /// let set1 = Set::from_iter(vec![2]);
+    /// let set2 = Set::from_iter(vec![1, 2, 3]);
+    /// let set3 = Set::from_iter(vec![1, 2, 3, 4]);
     ///
     /// assert!( set1.is_subset(&set1));
     /// assert!( set1.is_subset(&set2));
@@ -630,10 +636,12 @@ impl<T: Ord + Clone> Set<T> {
     ///
     /// ```
     /// # use intro::list_set::Set;
-    /// let set1: Set<usize> = vec![1, 3, 5, 7].into_iter().collect();
-    /// let set2: Set<usize> = vec![1, 2, 3, 4].into_iter().collect();
+    /// use std::iter::FromIterator;
     ///
-    /// let set3: Set<usize> = vec![1, 3].into_iter().collect();
+    /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
+    /// let set2 = Set::from_iter(vec![1, 2, 3, 4]);
+    ///
+    /// let set3 = Set::from_iter(vec![1, 3]);
     ///
     /// assert_eq!(set3, set1.intersection(&set2));
     /// assert_eq!(set3, set2.intersection(&set1));
@@ -674,11 +682,12 @@ impl<T: Ord + Clone> Set<T> {
     ///
     /// ```
     /// # use intro::list_set::Set;
-    /// let set1: Set<usize> = vec![1, 3, 5, 7].into_iter().collect();
-    /// let set2: Set<usize> = vec![1, 2, 3, 4].into_iter().collect();
+    /// use std::iter::FromIterator;
     ///
-    /// let set3: Set<usize> = vec![1, 2, 3, 4, 5, 7]
-    ///                        .into_iter().collect();
+    /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
+    /// let set2 = Set::from_iter(vec![1, 2, 3, 4]);
+    ///
+    /// let set3 = Set::from_iter(vec![1, 2, 3, 4, 5, 7]);
     ///
     /// assert_eq!(set3, set1.union(&set2));
     /// assert_eq!(set3, set2.union(&set1));
@@ -733,11 +742,13 @@ impl<T: Ord + Clone> Set<T> {
     ///
     /// ```
     /// # use intro::list_set::Set;
-    /// let set1: Set<usize> = vec![1, 3, 5, 7].into_iter().collect();
-    /// let set2: Set<usize> = vec![1, 2, 3, 4].into_iter().collect();
+    /// use std::iter::FromIterator;
     ///
-    /// let set3: Set<usize> = vec![5, 7].into_iter().collect();
-    /// let set4: Set<usize> = vec![2, 4].into_iter().collect();
+    /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
+    /// let set2 = Set::from_iter(vec![1, 2, 3, 4]);
+    ///
+    /// let set3 = Set::from_iter(vec![5, 7]);
+    /// let set4 = Set::from_iter(vec![2, 4]);
     ///
     /// assert_eq!(set3, set1.difference(&set2));
     /// assert_eq!(set4, set2.difference(&set1));
@@ -783,10 +794,12 @@ impl<T: Ord + Clone> Set<T> {
     ///
     /// ```
     /// # use intro::list_set::Set;
-    /// let set1: Set<usize> = vec![1, 3, 5, 7].into_iter().collect();
-    /// let set2: Set<usize> = vec![1, 2, 3, 4].into_iter().collect();
+    /// use std::iter::FromIterator;
     ///
-    /// let set3: Set<usize> = vec![2, 4, 5, 7].into_iter().collect();
+    /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
+    /// let set2 = Set::from_iter(vec![1, 2, 3, 4]);
+    ///
+    /// let set3 = Set::from_iter(vec![2, 4, 5, 7]);
     ///
     /// assert_eq!(set3, set1.symmetric_difference(&set2));
     /// assert_eq!(set3, set2.symmetric_difference(&set1));
@@ -831,5 +844,84 @@ impl<T: Ord + Clone> Set<T> {
         }
 
         result
+    }
+}
+
+#[cfg(test)]
+mod random_tests {
+    use super::Set;
+    use std::iter::FromIterator;
+
+    quickcheck! {
+        fn prop_member(vec: Vec<usize>, elems: Vec<usize>) -> bool {
+            let set = v2s(&vec);
+
+            for elem in elems {
+                let in_v = (&vec).into_iter().any(|x| *x == elem);
+                if set.contains(&elem) != in_v {
+                    return false;
+                }
+            }
+
+            true
+        }
+
+        fn prop_intersection(v1: Vec<usize>, v2: Vec<usize>) -> bool
+        {
+            let s1 = v2s(&v1);
+            let s2 = v2s(&v2);
+            let s3 = s1.intersection(&s2);
+
+            for &elem in &v1 {
+                if s3.contains(&elem) != s2.contains(&elem) {
+                    return false;
+                }
+            }
+
+            for &elem in &v2 {
+                if s3.contains(&elem) != s1.contains(&elem) {
+                    return false;
+                }
+            }
+
+            for &elem in &s3 {
+                if !s1.contains(&elem) || !s2.contains(&elem) {
+                    return false;
+                }
+            }
+
+            true
+        }
+
+        fn prop_union(v1: Vec<usize>, v2: Vec<usize>) -> bool
+        {
+            let s1 = v2s(&v1);
+            let s2 = v2s(&v2);
+            let s3 = s1.union(&s2);
+
+            for &elem in &v1 {
+                if !s3.contains(&elem) {
+                    return false;
+                }
+            }
+
+            for &elem in &v2 {
+                if !s3.contains(&elem) {
+                    return false;
+                }
+            }
+
+            for &elem in &s3 {
+                if !s1.contains(&elem) && !s2.contains(&elem) {
+                    return false;
+                }
+            }
+
+            true
+        }
+    }
+
+    fn v2s<T: Clone + Ord>(vec: &Vec<T>) -> Set<T> {
+        Set::from_iter(vec.clone())
     }
 }
