@@ -176,21 +176,18 @@ impl<T: Ord> Set<T> {
     /// assert!(!set.contains(&6));
     /// ```
     pub fn insert(&mut self, element: T) -> bool {
-        {
-            let mut cur = CursorMut::new(self);
+        let mut cur = CursorMut::new(self);
 
-            while !cur.is_empty() {
-                match element.cmp(cur.data()) {
-                    Less => break,
-                    Equal => return false,
-                    Greater => cur.advance(),
-                }
+        while !cur.is_empty() {
+            match element.cmp(cur.data()) {
+                Less => break,
+                Equal => return false,
+                Greater => cur.advance(),
             }
-
-            cur.insert(element);
         }
 
-        self.len += 1;
+        cur.insert(element);
+
         true
     }
 
@@ -209,23 +206,21 @@ impl<T: Ord> Set<T> {
     /// assert_eq!(Some(5), set.replace(5));
     /// ```
     pub fn replace(&mut self, element: T) -> Option<T> {
-        {
-            let mut cur = CursorMut::new(self);
+        let mut cur = CursorMut::new(self);
 
-            while !cur.is_empty() {
-                match element.cmp(cur.data()) {
-                    Less => break,
-                    Equal => {
-                        return Some(mem::replace(cur.data(), element));
-                    }
-                    Greater => cur.advance(),
+        while !cur.is_empty() {
+            match element.cmp(cur.data()) {
+                Less => break,
+                Equal => {
+                    let old_data = mem::replace(cur.data(), element);
+                    return Some(old_data);
                 }
+                Greater => cur.advance(),
             }
-
-            cur.insert(element);
         }
 
-        self.len += 1;
+        cur.insert(element);
+
         None
     }
 
@@ -248,44 +243,39 @@ impl<T: Ord> Set<T> {
     /// assert_eq!(false,   set.contains(&5));
     /// ```
     pub fn remove(&mut self, element: &T) -> Option<T> {
-        let mut result = None;
+        let mut cur = CursorMut::new(self);
 
-        {
-            let mut cur = CursorMut::new(self);
-
-            while !cur.is_empty() {
-                match element.cmp(cur.data()) {
-                    Less => break,
-                    Equal => {
-                        result = Some(cur.remove());
-                        break;
-                    }
-                    Greater => cur.advance(),
-                }
+        while !cur.is_empty() {
+            match element.cmp(cur.data()) {
+                Less => break,
+                Equal => return Some(cur.remove()),
+                Greater => cur.advance(),
             }
         }
 
-        if result.is_some() {
-            self.len -= 1;
-        }
-
-        result
+        None
     }
 }
 
-struct CursorMut<'a, T: 'a>(Option<&'a mut Link<T>>);
+struct CursorMut<'a, T: 'a> {
+    link: Option<&'a mut Link<T>>,
+    len: &'a mut usize,
+}
 
 impl<'a, T: 'a> CursorMut<'a, T> {
     fn new(set: &'a mut Set<T>) -> Self {
-        CursorMut(Some(&mut set.head))
+        CursorMut {
+            link: Some(&mut set.head),
+            len: &mut set.len,
+        }
     }
 
     fn is_empty(&self) -> bool {
-        if let Some(&mut Some(_)) = self.0 {false} else {true}
+        if let Some(&mut Some(_)) = self.link {false} else {true}
     }
 
     fn data(&mut self) -> &mut T {
-        if let Some(&mut Some(ref mut node)) = self.0 {
+        if let Some(&mut Some(ref mut node)) = self.link {
             &mut node.data
         } else {
             panic!("CursorMut::data: empty cursor");
@@ -293,18 +283,19 @@ impl<'a, T: 'a> CursorMut<'a, T> {
     }
 
     fn advance(&mut self) {
-        if let Some(link) = self.0.take() {
-            self.0 = link.as_mut().map(|node| &mut node.link);
+        if let Some(link) = self.link.take() {
+            self.link = link.as_mut().map(|node| &mut node.link);
         } else {
             panic!("CursorMut::advance: no next link");
         }
     }
 
     fn remove(&mut self) -> T {
-        if let Some(ref mut link) = self.0 {
+        if let Some(ref mut link) = self.link {
             if let Some(node_ptr) = mem::replace(*link, None) {
                 let node = *node_ptr;
                 mem::replace(*link, node.link);
+                *self.len -= 1;
                 node.data
             } else {
                 panic!("CursorMut::remove: no node to remove");
@@ -315,13 +306,14 @@ impl<'a, T: 'a> CursorMut<'a, T> {
     }
 
     fn insert(&mut self, data: T) {
-        if let Some(ref mut link) = self.0 {
+        if let Some(ref mut link) = self.link {
             let old_link = mem::replace(*link, None);
             let new_link = Some(Box::new(Node {
                 data: data,
                 link: old_link,
             }));
             mem::replace(*link, new_link);
+            *self.len += 1;
         } else {
             panic!("CursorMut::insert: empty cursor");
         }
@@ -416,20 +408,12 @@ impl<T> Iterator for IntoIter<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<T> {
-        let mut result = None;
-
-        {
-            let mut cur = CursorMut::new(&mut self.0);
-            if !cur.is_empty() {
-                result = Some(cur.remove())
-            }
+        let mut cur = CursorMut::new(&mut self.0);
+        if cur.is_empty() {
+            None
+        } else {
+            Some(cur.remove())
         }
-
-        if result.is_some() {
-            self.0.len -= 1;
-        }
-
-        result
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -460,20 +444,12 @@ impl<'a, T> Iterator for Drain<'a, T> {
     type Item = T;
 
     fn next(&mut self) -> Option<T> {
-        let mut result = None;
-
-        {
-            let mut cur = CursorMut::new(self.0);
-            if !cur.is_empty() {
-                result = Some(cur.remove());
-            }
+        let mut cur = CursorMut::new(self.0);
+        if cur.is_empty() {
+            None
+        } else {
+            Some(cur.remove())
         }
-
-        if result.is_some() {
-            self.0.len -= 1;
-        }
-
-        result
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
