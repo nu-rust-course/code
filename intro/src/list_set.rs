@@ -4,7 +4,7 @@
 use std::cmp::Ordering;
 use std::cmp::Ordering::*;
 use std::default::Default;
-use std::iter::FromIterator;
+use std::iter::{Extend, FromIterator};
 use std::mem;
 
 /// A set of elements of type `T`.
@@ -469,14 +469,18 @@ impl<'a, T> Drop for Drain<'a, T> {
     }
 }
 
+impl<T: Ord> Extend<T> for Set<T> {
+    fn extend<I: IntoIterator<Item=T>>(&mut self, iter: I) {
+        for elem in iter {
+            self.insert(elem);
+        }
+    }
+}
+
 impl<T: Ord> FromIterator<T> for Set<T> {
     fn from_iter<I: IntoIterator<Item=T>>(iter: I) -> Self {
         let mut result = Set::new();
-
-        for elem in iter {
-            result.insert(elem);
-        }
-
+        result.extend(iter);
         result
     }
 }
