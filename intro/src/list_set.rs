@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 //! Sets, represented as sorted, singly-linked lists.
 
-use std::cmp::Ordering;
+use std::default::Default;
+use std::cmp::Ordering::*;
 use std::mem;
 
 /// A set of elements of type `T`.
@@ -20,6 +21,7 @@ use std::mem;
 ///     set.insert("c");
 /// }
 /// ```
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct Set<T> {
     head: Link<T>,
     len: usize,
@@ -27,7 +29,7 @@ pub struct Set<T> {
 
 type Link<T> = Option<Box<Node<T>>>;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 struct Node<T> {
     data: T,
     link: Link<T>,
@@ -89,6 +91,12 @@ impl<T> Set<T> {
     }
 }
 
+impl<T> Default for Set<T> {
+    fn default() -> Self {
+        Set::new()
+    }
+}
+
 impl<T: Ord> Set<T> {
     /// Checks whether the given set contains the given element.
     ///
@@ -109,9 +117,9 @@ impl<T: Ord> Set<T> {
 
         while let Some(ref node) = *current {
             match element.cmp(&node.data) {
-                Ordering::Less => return false,
-                Ordering::Equal => return true,
-                Ordering::Greater => current = &node.link,
+                Less => return false,
+                Equal => return true,
+                Greater => current = &node.link,
             }
         }
 
@@ -142,11 +150,11 @@ impl<T: Ord> Set<T> {
         {
             let mut cur = CursorMut::new(self);
 
-            while !cur.is_nil() {
-                match element.cmp(cur.element()) {
-                    Ordering::Less => break,
-                    Ordering::Equal => return false,
-                    Ordering::Greater => cur.next(),
+            while !cur.is_empty() {
+                match element.cmp(cur.data()) {
+                    Less => break,
+                    Equal => return false,
+                    Greater => cur.advance(),
                 }
             }
 
@@ -175,11 +183,13 @@ impl<T: Ord> Set<T> {
         {
             let mut cur = CursorMut::new(self);
 
-            while !cur.is_nil() {
-                match element.cmp(cur.element()) {
-                    Ordering::Less => break,
-                    Ordering::Equal => return Some(cur.replace(element)),
-                    Ordering::Greater => cur.next(),
+            while !cur.is_empty() {
+                match element.cmp(cur.data()) {
+                    Less => break,
+                    Equal => {
+                        return Some(mem::replace(cur.data(), element));
+                    }
+                    Greater => cur.advance(),
                 }
             }
 
@@ -192,8 +202,8 @@ impl<T: Ord> Set<T> {
 
     /// Removes the given element from the set.
     ///
-    /// Returns `true` if the element was removed and `false` if it
-    /// didn't exist.
+    /// Returns `Some(data)` where `data` was the element, if removed,
+    /// or `None` if the element didn’t exist.
     ///
     /// # Example
     ///
@@ -201,31 +211,32 @@ impl<T: Ord> Set<T> {
     /// # use intro::list_set::Set;
     /// let mut set = Set::new();
     ///
-    /// assert_eq!(false, set.contains(&5));
-    /// assert_eq!(true,  set.insert(5));
-    /// assert_eq!(true,  set.contains(&5));
-    /// assert_eq!(false, set.insert(5));
-    /// assert_eq!(true,  set.remove(&5));
-    /// assert_eq!(false, set.contains(&5));
+    /// assert_eq!(false,   set.contains(&5));
+    /// assert_eq!(true,    set.insert(5));
+    /// assert_eq!(true,    set.contains(&5));
+    /// assert_eq!(false,   set.insert(5));
+    /// assert_eq!(Some(5), set.remove(&5));
+    /// assert_eq!(false,   set.contains(&5));
     /// ```
-    pub fn remove(&mut self, element: &T) -> bool {
-        let mut result = false;
+    pub fn remove(&mut self, element: &T) -> Option<T> {
+        let mut result = None;
 
         {
             let mut cur = CursorMut::new(self);
 
-            while !cur.is_nil() {
-                if element == cur.element() {
-                    cur.remove();
-                    result = true;
-                    break;
+            while !cur.is_empty() {
+                match element.cmp(cur.data()) {
+                    Less => break,
+                    Equal => {
+                        result = Some(cur.remove());
+                        break;
+                    }
+                    Greater => cur.advance(),
                 }
-
-                cur.next();
             }
         }
 
-        if result {
+        if result.is_some() {
             self.len -= 1;
         }
 
@@ -240,58 +251,165 @@ impl<'a, T: 'a> CursorMut<'a, T> {
         CursorMut(Some(&mut set.head))
     }
 
-    fn element(&self) -> &T {
-        if let Some(&mut Some(ref node)) = self.0 {
-            &node.data
-        } else {
-            panic!("CursorMut::element: no element");
-        }
-    }
-
-    fn is_nil(&self) -> bool {
+    fn is_empty(&self) -> bool {
         if let Some(&mut Some(_)) = self.0 {false} else {true}
     }
 
-    fn next(&mut self) {
+    fn data(&mut self) -> &mut T {
+        if let Some(&mut Some(ref mut node)) = self.0 {
+            &mut node.data
+        } else {
+            panic!("CursorMut::data: empty cursor");
+        }
+    }
+
+    fn advance(&mut self) {
         if let Some(link) = self.0.take() {
             self.0 = link.as_mut().map(|node| &mut node.link);
         } else {
-            panic!("CursorMut::next: no next link");
+            panic!("CursorMut::advance: no next link");
         }
     }
 
-    fn replace(&mut self, element: T) -> T {
-        if let Some(&mut Some(ref mut node)) = self.0 {
-            mem::replace(&mut node.data, element)
+    fn remove(&mut self) -> T {
+        if let Some(ref mut link) = self.0 {
+            if let Some(node_ptr) = mem::replace(*link, None) {
+                let node = *node_ptr;
+                mem::replace(*link, node.link);
+                node.data
+            } else {
+                panic!("CursorMut::remove: no node to remove");
+            }
         } else {
-            panic!("CursorMut::replace: no element");
+            panic!("CursorMut::remove: empty cursor");
         }
     }
 
-    fn map_link<F>(&mut self, mapper: F)
-        where F: FnOnce(Link<T>) -> Link<T>
-    {
-
+    fn insert(&mut self, data: T) {
         if let Some(ref mut link) = self.0 {
             let old_link = mem::replace(*link, None);
-            mem::replace(*link, mapper(old_link));
+            let new_link = Some(Box::new(Node {
+                data: data,
+                link: old_link,
+            }));
+            mem::replace(*link, new_link);
         } else {
-            panic!("CursorMut::map_link: empty cursor");
+            panic!("CursorMut::insert: empty cursor");
         }
-    }
-
-    fn remove(&mut self) {
-        self.map_link(|link| match link {
-            Some(node) => node.link,
-            None => None
-        });
-    }
-
-    fn insert(&mut self, element: T) {
-        self.map_link(|link| Some(Box::new(Node {
-            data: element,
-            link: link,
-        })));
     }
 }
 
+/// An immutable iterator over the elements of a `Set`.
+///
+/// # Example
+///
+/// ```
+/// # use intro::list_set::Set;
+/// let mut set = Set::new();
+///
+/// set.insert(2);
+/// set.insert(4);
+/// set.insert(3);
+///
+/// let mut iter = (&set).into_iter();
+///
+/// assert_eq!(Some(&2), iter.next());
+/// assert_eq!(Some(&3), iter.next());
+/// assert_eq!(Some(&4), iter.next());
+/// assert_eq!(None, iter.next());
+/// ```
+#[derive(Debug)]
+pub struct Iter<'a, T: 'a> {
+    link: &'a Link<T>,
+    len: usize,
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<&'a T> {
+        match *self.link {
+            Some(ref node_ptr) => {
+                self.link = &node_ptr.link;
+                self.len -= 1;
+                Some(&node_ptr.data)
+            }
+            None => None,
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len, Some(self.len))
+    }
+}
+
+impl<'a, T> ExactSizeIterator for Iter<'a, T> {
+    fn len(&self) -> usize {
+        self.len
+    }
+}
+
+impl<'a, T> IntoIterator for &'a Set<T> {
+    type Item = &'a T;
+    type IntoIter = Iter<'a, T>;
+
+    fn into_iter(self) -> Iter<'a, T> {
+        Iter {
+            link: &self.head,
+            len: self.len,
+        }
+    }
+}
+
+/// An iterator that consumes a `Set` as it iterates.
+///
+/// # Example
+///
+/// ```
+/// # use intro::list_set::Set;
+/// let mut set = Set::new();
+///
+/// set.insert(2);
+/// set.insert(4);
+/// set.insert(3);
+///
+/// let mut iter = set.into_iter();
+///
+/// assert_eq!(Some(2), iter.next());
+/// assert_eq!(Some(3), iter.next());
+/// assert_eq!(Some(4), iter.next());
+/// assert_eq!(None, iter.next());
+/// ```
+pub struct IntoIter<T>(Set<T>);
+
+impl<T> Iterator for IntoIter<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<T> {
+        let mut cur = CursorMut::new(&mut self.0);
+        if cur.is_empty() {
+            None
+        } else {
+            Some(cur.remove())
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.0.len, Some(self.0.len))
+    }
+}
+
+impl<T> ExactSizeIterator for IntoIter<T> {
+    fn len(&self) -> usize {
+        self.0.len
+    }
+}
+
+impl<T> IntoIterator for Set<T> {
+    type Item = T;
+    type IntoIter = IntoIter<T>;
+
+    fn into_iter(self) -> IntoIter<T> {
+        IntoIter(self)
+    }
+}
