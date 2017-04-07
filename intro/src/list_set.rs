@@ -170,9 +170,9 @@ impl<T: Ord> Set<T> {
     /// set.insert(4);
     ///
     /// assert!(!set.contains(&2));
-    /// assert!(set.contains(&3));
-    /// assert!(set.contains(&4));
-    /// assert!(set.contains(&5));
+    /// assert!( set.contains(&3));
+    /// assert!( set.contains(&4));
+    /// assert!( set.contains(&5));
     /// assert!(!set.contains(&6));
     /// ```
     pub fn insert(&mut self, element: T) -> bool {
@@ -528,8 +528,6 @@ impl<T: Clone> Clone for Set<T> {
             }
         }
 
-        result.len = self.len;
-
         result
     }
 }
@@ -539,4 +537,215 @@ fn test_clone() {
     let set1: Set<usize> = vec![3, 5, 4].into_iter().collect();
     let set2 = set1.clone();
     assert_eq!(set2, set1);
+}
+
+impl<T: Ord + Clone> Set<T> {
+    /// Returns the intersection of two sets.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use intro::list_set::Set;
+    /// let set1: Set<usize> = vec![1, 3, 5, 7].into_iter().collect();
+    /// let set2: Set<usize> = vec![1, 2, 3, 4].into_iter().collect();
+    ///
+    /// let set3: Set<usize> = vec![1, 3].into_iter().collect();
+    ///
+    /// assert_eq!(set3, set1.intersection(&set2));
+    /// assert_eq!(set3, set2.intersection(&set1));
+    /// ```
+    pub fn intersection(&self, other: &Set<T>) -> Self {
+        let mut result = Set::new();
+
+        {
+            let mut cur = CursorMut::new(&mut result);
+
+            let mut i = self.into_iter().peekable();
+            let mut j = other.into_iter().peekable();
+
+            while let (Some(&a), Some(&b)) = (i.peek(), j.peek()) {
+                match a.cmp(b) {
+                    Less => {
+                        i.next();
+                    }
+                    Greater => {
+                        j.next();
+                    }
+                    Equal => {
+                        cur.insert(a.clone());
+                        cur.advance();
+                        i.next();
+                        j.next();
+                    }
+                }
+            }
+        }
+
+        result
+    }
+
+    /// Returns the union of two sets.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use intro::list_set::Set;
+    /// let set1: Set<usize> = vec![1, 3, 5, 7].into_iter().collect();
+    /// let set2: Set<usize> = vec![1, 2, 3, 4].into_iter().collect();
+    ///
+    /// let set3: Set<usize> = vec![1, 2, 3, 4, 5, 7]
+    ///                        .into_iter().collect();
+    ///
+    /// assert_eq!(set3, set1.union(&set2));
+    /// assert_eq!(set3, set2.union(&set1));
+    /// ```
+    pub fn union(&self, other: &Set<T>) -> Self {
+        let mut result = Set::new();
+
+        {
+            let mut cur = CursorMut::new(&mut result);
+
+            let mut i = self.into_iter().peekable();
+            let mut j = other.into_iter().peekable();
+
+            while let (Some(&a), Some(&b)) = (i.peek(), j.peek()) {
+                match a.cmp(b) {
+                    Less => {
+                        cur.insert(a.clone());
+                        cur.advance();
+                        i.next();
+                    }
+                    Greater => {
+                        cur.insert(b.clone());
+                        cur.advance();
+                        j.next();
+                    }
+                    Equal => {
+                        cur.insert(a.clone());
+                        cur.advance();
+                        i.next();
+                        j.next();
+                    }
+                }
+            }
+
+            while let Some(a) = i.next() {
+                cur.insert(a.clone());
+                cur.advance();
+            }
+
+            while let Some(b) = j.next() {
+                cur.insert(b.clone());
+                cur.advance();
+            }
+        }
+
+        result
+    }
+
+    /// Returns the difference of two sets.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use intro::list_set::Set;
+    /// let set1: Set<usize> = vec![1, 3, 5, 7].into_iter().collect();
+    /// let set2: Set<usize> = vec![1, 2, 3, 4].into_iter().collect();
+    ///
+    /// let set3: Set<usize> = vec![5, 7].into_iter().collect();
+    /// let set4: Set<usize> = vec![2, 4].into_iter().collect();
+    ///
+    /// assert_eq!(set3, set1.difference(&set2));
+    /// assert_eq!(set4, set2.difference(&set1));
+    /// ```
+    pub fn difference(&self, other: &Set<T>) -> Self {
+        let mut result = Set::new();
+
+        {
+            let mut cur = CursorMut::new(&mut result);
+
+            let mut i = self.into_iter().peekable();
+            let mut j = other.into_iter().peekable();
+
+            while let (Some(&a), Some(&b)) = (i.peek(), j.peek()) {
+                match a.cmp(b) {
+                    Less => {
+                        cur.insert(a.clone());
+                        cur.advance();
+                        i.next();
+                    }
+                    Greater => {
+                        j.next();
+                    }
+                    Equal => {
+                        i.next();
+                        j.next();
+                    }
+                }
+            }
+
+            while let Some(a) = i.next() {
+                cur.insert(a.clone());
+                cur.advance();
+            }
+        }
+
+        result
+    }
+
+    /// Returns the symmetric difference of two sets.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use intro::list_set::Set;
+    /// let set1: Set<usize> = vec![1, 3, 5, 7].into_iter().collect();
+    /// let set2: Set<usize> = vec![1, 2, 3, 4].into_iter().collect();
+    ///
+    /// let set3: Set<usize> = vec![2, 4, 5, 7].into_iter().collect();
+    ///
+    /// assert_eq!(set3, set1.symmetric_difference(&set2));
+    /// assert_eq!(set3, set2.symmetric_difference(&set1));
+    /// ```
+    pub fn symmetric_difference(&self, other: &Set<T>) -> Self {
+        let mut result = Set::new();
+
+        {
+            let mut cur = CursorMut::new(&mut result);
+
+            let mut i = self.into_iter().peekable();
+            let mut j = other.into_iter().peekable();
+
+            while let (Some(&a), Some(&b)) = (i.peek(), j.peek()) {
+                match a.cmp(b) {
+                    Less => {
+                        cur.insert(a.clone());
+                        cur.advance();
+                        i.next();
+                    }
+                    Greater => {
+                        cur.insert(b.clone());
+                        cur.advance();
+                        j.next();
+                    }
+                    Equal => {
+                        i.next();
+                        j.next();
+                    }
+                }
+            }
+
+            while let Some(a) = i.next() {
+                cur.insert(a.clone());
+                cur.advance();
+            }
+
+            while let Some(b) = j.next() {
+                cur.insert(b.clone());
+                cur.advance();
+            }
+        }
+
+        result
+    }
 }
