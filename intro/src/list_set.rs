@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 //! Sets, represented as sorted, singly-linked lists.
 
+use std::cmp::Ordering;
 use std::cmp::Ordering::*;
 use std::default::Default;
 use std::iter::FromIterator;
@@ -22,7 +23,7 @@ use std::mem;
 ///     set.insert("c");
 /// }
 /// ```
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Debug)]
 pub struct Set<T> {
     head: Link<T>,
     len: usize,
@@ -30,7 +31,7 @@ pub struct Set<T> {
 
 type Link<T> = Option<Box<Node<T>>>;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Debug)]
 struct Node<T> {
     data: T,
     link: Link<T>,
@@ -132,8 +133,7 @@ impl<T: Ord> Set<T> {
     ///
     /// ```
     /// # use intro::list_set::Set;
-    /// let mut set: Set<usize> =
-    ///     vec![3, 5, 4].into_iter().collect();
+    /// let set: Set<usize> = vec![3, 5, 4].into_iter().collect();
     ///
     /// assert!(!set.contains(&2));
     /// assert!( set.contains(&3));
@@ -503,4 +503,64 @@ impl<T: Ord> FromIterator<T> for Set<T> {
 
         result
     }
+}
+
+impl<T: Ord> Ord for Set<T> {
+    fn cmp(&self, other: &Set<T>) -> Ordering {
+        let mut i = self.into_iter();
+        let mut j = other.into_iter();
+
+        loop {
+            match (i.next(), j.next()) {
+                (None, None) => return Equal,
+                (None, Some(_)) => return Less,
+                (Some(_), None) => return Greater,
+                (Some(a), Some(b)) => match a.cmp(b) {
+                    Less => return Less,
+                    Greater => return Greater,
+                    Equal => continue,
+                }
+            }
+        }
+    }
+}
+
+impl<T: Ord> PartialOrd for Set<T> {
+    fn partial_cmp(&self, other: &Set<T>) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<T: Ord> PartialEq for Set<T> {
+    fn eq(&self, other: &Set<T>) -> bool {
+        self.cmp(other) == Equal
+    }
+}
+
+impl<T: Ord> Eq for Set<T> {}
+
+impl<T: Clone> Clone for Set<T> {
+    fn clone(&self) -> Self {
+        let mut result = Set::new();
+
+        {
+            let mut cur = CursorMut::new(&mut result);
+
+            for each in self {
+                cur.insert(each.clone());
+                cur.advance();
+            }
+        }
+
+        result.len = self.len;
+
+        result
+    }
+}
+
+#[test]
+fn test_clone() {
+    let set1: Set<usize> = vec![3, 5, 4].into_iter().collect();
+    let set2 = set1.clone();
+    assert_eq!(set2, set1);
 }
