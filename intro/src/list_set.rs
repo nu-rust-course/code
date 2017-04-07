@@ -543,6 +543,86 @@ fn test_clone() {
     assert_eq!(set2, set1);
 }
 
+impl<T: Ord> Set<T> {
+    /// Returns whether two sets are disjoint.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use intro::list_set::Set;
+    /// let set1: Set<usize> = vec![1, 2].into_iter().collect();
+    /// let set2: Set<usize> = vec![3, 4].into_iter().collect();
+    /// let set3: Set<usize> = vec![1, 3].into_iter().collect();
+    ///
+    /// assert!(!set1.is_disjoint(&set1));
+    /// assert!( set1.is_disjoint(&set2));
+    /// assert!(!set1.is_disjoint(&set3));
+    /// assert!( set2.is_disjoint(&set1));
+    /// assert!(!set2.is_disjoint(&set2));
+    /// assert!(!set2.is_disjoint(&set3));
+    /// assert!(!set3.is_disjoint(&set1));
+    /// assert!(!set3.is_disjoint(&set2));
+    /// assert!(!set3.is_disjoint(&set3));
+    /// ```
+    pub fn is_disjoint(&self, other: &Set<T>) -> bool {
+        let mut i = &self.head;
+        let mut j = &other.head;
+
+        while let (&Some(ref ilink), &Some(ref jlink)) = (i, j) {
+            match ilink.data.cmp(&jlink.data) {
+                Less    => i = &ilink.link,
+                Greater => j = &jlink.link,
+                Equal   => return false,
+            }
+        }
+
+        true
+    }
+
+    /// Returns whether `self` is a subset of `other`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use intro::list_set::Set;
+    /// let set1: Set<usize> = vec![2].into_iter().collect();
+    /// let set2: Set<usize> = vec![1, 2, 3].into_iter().collect();
+    /// let set3: Set<usize> = vec![1, 2, 3, 4].into_iter().collect();
+    ///
+    /// assert!( set1.is_subset(&set1));
+    /// assert!( set1.is_subset(&set2));
+    /// assert!( set1.is_subset(&set3));
+    /// assert!(!set2.is_subset(&set1));
+    /// assert!( set2.is_subset(&set2));
+    /// assert!( set2.is_subset(&set3));
+    /// assert!(!set3.is_subset(&set1));
+    /// assert!(!set3.is_subset(&set2));
+    /// assert!( set3.is_subset(&set3));
+    /// ```
+    pub fn is_subset(&self, other: &Set<T>) -> bool {
+        let mut i = &self.head;
+        let mut j = &other.head;
+
+        while let (&Some(ref ilink), &Some(ref jlink)) = (i, j) {
+            match ilink.data.cmp(&jlink.data) {
+                Less    => return false,
+                Greater => j = &jlink.link,
+                Equal   => {
+                    i = &ilink.link;
+                    j = &jlink.link;
+                }
+            }
+        }
+
+        i.is_none() || j.is_some()
+    }
+
+    /// Returns whether `self` is a superset of `other`.
+    pub fn is_superset(&self, other: &Set<T>) -> bool {
+        other.is_subset(self)
+    }
+}
+
 impl<T: Ord + Clone> Set<T> {
     /// Returns the intersection of two sets.
     ///
