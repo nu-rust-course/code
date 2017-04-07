@@ -866,8 +866,7 @@ mod random_tests {
             true
         }
 
-        fn prop_intersection(v1: Vec<usize>, v2: Vec<usize>) -> bool
-        {
+        fn prop_intersection(v1: Vec<usize>, v2: Vec<usize>) -> bool {
             let s1 = v2s(&v1);
             let s2 = v2s(&v2);
             let s3 = s1.intersection(&s2);
@@ -893,8 +892,7 @@ mod random_tests {
             true
         }
 
-        fn prop_union(v1: Vec<usize>, v2: Vec<usize>) -> bool
-        {
+        fn prop_union(v1: Vec<usize>, v2: Vec<usize>) -> bool {
             let s1 = v2s(&v1);
             let s2 = v2s(&v2);
             let s3 = s1.union(&s2);
