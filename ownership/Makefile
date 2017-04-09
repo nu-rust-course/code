@@ -1,17 +1,9 @@
-default: build
-hard: test
+default:
+	@clear
+	@cargo test
+	@echo Enter to continue...
+	@read dummy
 
-build:
-	clear
-	cargo build
-
-run:
-	clear
-	cargo run
-
-test:
-	clear
-	cargo test
-
-clean:
-	cargo clean
+hard:
+	@clear
+	@cargo doc
