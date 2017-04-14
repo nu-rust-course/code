@@ -12,81 +12,169 @@
 //!  - Words with the same frequency will be printed in lexicographic
 //!    order.
 
+use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::fmt;
 use std::io::{BufRead, BufReader, Read, stdin, stdout, Write};
 
 fn main() {
-    let counts = count_from_input(stdin());
-    let sorted = sort_counts(&counts);
+    let words  = Words::new(stdin());
+    let counts = count_words(words);
+    let sorted = sort_counts(counts);
     display_counts(stdout(), &sorted);
 }
 
-fn count_from_input<R: Read>(input: R) -> HashMap<String, usize> {
+fn count_words<I>(input: I) -> HashMap<String, usize>
+    where I: Iterator<Item=String>
+{
     let mut counts  = HashMap::new();
-    let mut lines   = BufReader::new(input).lines();
 
-    while let Some(Ok(line)) = lines.next() {
-        for word in line.split(|c| !is_word_char(c)) {
-            if word.is_empty() {continue}
-            *counts.entry(word.to_owned()).or_insert(0) += 1;
-        }
+    for word in input {
+        *counts.entry(word.to_owned()).or_insert(0) += 1;
     }
 
     counts
+}
+
+fn sort_counts(counts: HashMap<String, usize>) -> Vec<WordFreq> {
+    let mut result: Vec<_> =
+        counts.into_iter().map(|(s, c)| WordFreq(s, c)).collect();
+    result.sort();
+    result
+}
+
+fn display_counts<W: Write>(mut output: W, counts: &[WordFreq]) {
+    for each in counts {
+        writeln!(output, "{}", each).unwrap();
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct WordFreq(String, usize);
+
+impl fmt::Display for WordFreq {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(formatter, "{}: {}", self.0, self.1)
+    }
+}
+
+impl Ord for WordFreq {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match other.1.cmp(&self.1) {
+            Ordering::Equal => self.0.cmp(&other.0),
+            otherwise => otherwise,
+        }
+    }
+}
+
+impl PartialOrd for WordFreq {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// An iterator over the words of a `Read`.
+#[derive(Debug)]
+struct Words<R> {
+    lines: std::io::Lines<BufReader<R>>,
+    words: std::vec::IntoIter<String>,
+}
+
+impl<R: Read> Words<R> {
+    fn new(input: R) -> Self {
+        Words {
+            lines: BufReader::new(input).lines(),
+            words: Vec::new().into_iter(),
+        }
+    }
+}
+
+impl<R: Read> Iterator for Words<R> {
+    type Item = String;
+
+    fn next(&mut self) -> Option<String> {
+        loop {
+            if let Some(word) = self.words.next() {
+                return Some(word);
+            } else if let Some(Ok(line)) = self.lines.next() {
+                self.words = line.split(|c| !is_word_char(c))
+                                 .filter(|s| !s.is_empty())
+                                 .map(|s| s.to_owned())
+                                 .collect::<Vec<_>>()
+                                 .into_iter();
+            } else {
+                return None;
+            }
+        }
+    }
 }
 
 fn is_word_char(c: char) -> bool {
     c.is_alphanumeric() || c == '\''
 }
 
-fn sort_counts(counts: &HashMap<String, usize>) -> Vec<(&str, usize)> {
-    let mut result: Vec<_> =
-        counts.into_iter().map(|(s, c)| (s.as_str(), *c)).collect();
-    // First compare the counts in reverse order, and if those are the
-    // same, compare the words in normal order:
-    result.sort_by(|a, b| (b.1, a.0).cmp(&(a.1, b.0)));
-    result
-}
-
-fn display_counts<W: Write>(mut output: W, counts: &[(&str, usize)]) {
-    for &(word, count) in counts {
-        writeln!(output, "{}: {}", word, count).unwrap();
-    }
-}
-
 #[cfg(test)]
-mod count_from_input_tests {
-    use super::count_from_input;
-    use super::test_helpers::*;
+mod words_iterator_tests {
+    use super::Words;
     use std::io::Cursor;
 
     #[test]
     fn hello_world_goodbye_world() {
+        assert_split(&["hello", "world", "goodbye", "world"],
+                     "hello world,\ngoodbye world\n");
+    }
+
+    #[test]
+    fn abcaba() {
+        assert_split(&["a", "b", "c", "a", "b", "a"],
+                      "   a--b, c. a b a.");
+    }
+
+    #[test]
+    fn apostrophes() {
+        assert_split(&["can't", "won't"],
+                     "can't won't");
+    }
+
+    fn assert_split(expected: &[&str], input: &str) {
+        let act: Vec<_> = Words::new(Cursor::new(input)).collect();
+        let exp: Vec<_> = expected.into_iter().map(|s| s.to_owned()).collect();
+        assert_eq!(exp, act);
+    }
+}
+
+#[cfg(test)]
+mod count_word_tests {
+    use super::*;
+
+    #[test]
+    fn hello_world_goodbye_world() {
         assert_counts(&[("hello", 1), ("goodbye", 1), ("world", 2)],
-                      "hello world,\ngoodbye world\n");
+                      &["hello", "world", "goodbye", "world"]);
     }
 
     #[test]
     fn abcaba() {
         assert_counts(&[("a", 3), ("b", 2), ("c", 1)],
-                      "a--b, c. a b a.");
+                      &["a", "b", "c", "a", "b", "a"]);
     }
 
     #[test]
     fn apostrophes() {
         assert_counts(&[("can't", 1), ("won't", 1)],
-                      "can't won't");
+                      &["can't", "won't"]);
     }
 
     #[test]
     fn case_sensitive() {
         assert_counts(&[("Hello", 1), ("hello", 2)],
-                      "Hello hello   hello");
+                      &["Hello", "hello", "hello"]);
     }
 
-    fn assert_counts(expected: &[(&str, usize)], input: &str) {
+    fn assert_counts(expected: &[(&str, usize)], input: &[&str]) {
         let map    = make_hash_map(expected);
-        let actual = count_from_input(Cursor::new(input));
+        let iter   = input.into_iter().map(|&s| s.to_owned());
+        let actual = count_words(iter);
         assert_eq!(map, actual);
     }
 }
@@ -131,8 +219,7 @@ mod is_word_char_tests {
 
 #[cfg(test)]
 mod sort_counts_tests {
-    use super::sort_counts;
-    use super::test_helpers::*;
+    use super::*;
 
     #[test]
     fn hello_world_goodbye_world() {
@@ -148,14 +235,14 @@ mod sort_counts_tests {
 
     fn assert_sorted(expected: &[(&str, usize)], counts: &[(&str, usize)]) {
         let map    = make_hash_map(counts);
-        let sorted = sort_counts(&map);
-        assert_eq!(expected, sorted.as_slice());
+        let sorted = sort_counts(map);
+        assert_eq!(make_wf_vec(expected), sorted);
     }
 }
 
 #[cfg(test)]
 mod display_counts_tests {
-    use super::display_counts;
+    use super::*;
     use std::io::Cursor;
 
     #[test]
@@ -171,16 +258,18 @@ mod display_counts_tests {
 
     fn assert_output(expected: &str, counts: &[(&str, usize)]) {
         let mut cursor = Cursor::new(Vec::<u8>::new());
-        display_counts(&mut cursor, counts);
+        let counts = make_wf_vec(counts);
+        display_counts(&mut cursor, &counts);
         assert_eq!(expected.as_bytes(), cursor.into_inner().as_slice());
     }
 }
 
 #[cfg(test)]
-mod test_helpers {
-    use std::collections::HashMap;
+fn make_hash_map(slice: &[(&str, usize)]) -> HashMap<String, usize> {
+    slice.into_iter().map(|&(s, c)| (s.to_owned(), c)).collect()
+}
 
-    pub fn make_hash_map(slice: &[(&str, usize)]) -> HashMap<String, usize> {
-        slice.into_iter().map(|&(s, c)| (s.to_owned(), c)).collect()
-    }
+#[cfg(test)]
+fn make_wf_vec(slice: &[(&str, usize)]) -> Vec<WordFreq> {
+    slice.into_iter().map(|&(s, c)| WordFreq(s.to_owned(), c)).collect()
 }
