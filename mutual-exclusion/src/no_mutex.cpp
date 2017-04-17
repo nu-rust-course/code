@@ -1,29 +1,32 @@
+#include <UnitTest++/UnitTest++.h>
+
 #include <iostream>
 #include <thread>
 
+using namespace std;
+
 class Counter {
 public:
-    int get() const {
-        return count_;
-    }
-
-    void inc() {
-        ++count_;
+    int get_and_inc() {
+        int old = count_;
+        count_ = old + 1;
+        return old;
     }
 
 private:
     int count_ = 0;
 };
 
-// int main()
-// {
-//     Counter c;
+TEST(Counter_test)
+{
+    Counter c;
 
-//     std::thread t1([&]() { c.inc(); });
-//     std::thread t2([&]() { c.inc(); });
+    thread t1([&]() { c.get_and_inc(); });
+    thread t2([&]() { c.get_and_inc(); });
 
-//     t1.join();
-//     t2.join();
+    t1.join();
+    t2.join();
 
-//     std::cout << c.get() << '\n';
-// }
+    // This won't necessarily pass!
+    CHECK_EQUAL(2, c.get_and_inc());
+}
