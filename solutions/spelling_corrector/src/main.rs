@@ -34,7 +34,7 @@ mod helpers {
         }
     }
 
-    pub fn train_from_file(file_name: &String) -> train::Freqs {
+    pub fn train_from_file(file_name: &str) -> train::Freqs {
         let chars = CharIter::open(file_name)
                       .expect("couldn't open training file");
         train::build_freqs(chars)
