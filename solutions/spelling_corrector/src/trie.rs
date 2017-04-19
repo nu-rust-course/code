@@ -53,12 +53,12 @@ impl<T> Node<T> {
         }
     }
 
-    /// Converts this node into a cursor.
+    /// Gets a cursor pointing to this node.
     fn cursor(&self) -> Cursor<T> {
         Cursor { node: self }
     }
 
-    /// Converts this mutable node into a mutable cursor with the given
+    /// Gets a mutable cursor pointing to this mutable node, with the given
     /// branching factor. (The branching factor is needed in order to
     /// create new nodes.)
     fn cursor_mut(&mut self, factor: usize) -> CursorMut<T> {
@@ -69,12 +69,13 @@ impl<T> Node<T> {
     }
 
     /// Looks up a key in the trie, returning its value or the given default.
-    fn lookup<'a, 'b>(&'a self, key: &'b [usize], default: &'a Option<T>)
+    fn lookup<'a, 'b, I>(&'a self, key: I, default: &'a Option<T>)
         -> &'a Option<T>
+    where I: IntoIterator<Item=&'b usize>
     {
         let mut cursor = self.cursor();
 
-        for &each in key.iter() {
+        for &each in key {
             if !cursor.descend(each) { return default }
         }
 
