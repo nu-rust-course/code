@@ -141,8 +141,8 @@ impl<'a, T> CursorMut<'a, T> {
         .cursor_mut(self.factor)
     }
 
-    /// Consumes the cursor and adds a child at the given key position,
-    /// if there isn't one already, and returns a `CursorMut` pointing
+    /// Consumes the cursor and adds a child at the given key position
+    /// if there isn't one already, returning a `CursorMut` pointing
     /// to the child.
     pub fn into_child_add(self, key: usize) -> Self {
         match &mut self.node.children[key] {
