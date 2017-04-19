@@ -12,8 +12,7 @@ fn main() {
 #[cfg(not(test))]
 mod helpers {
     use spelling_corrector::{train, suggest};
-    use std::io::BufReader;
-    use std::io::BufRead;
+    use std::io::{BufRead, BufReader, Bytes, Read};
     use std::fs::File;
 
     pub fn correct_from_stdin(dict: &train::Freqs) {
@@ -40,11 +39,11 @@ mod helpers {
         train::build_freqs(chars)
     }
 
-    struct Chars<R>(R, Vec<u8>);
+    struct Chars<R>(Bytes<R>);
 
-    impl<R: BufRead> Chars<R> {
-        fn new(buf_read: R) -> Self {
-            Chars(buf_read, Vec::with_capacity(1))
+    impl<R: Read> Chars<R> {
+        fn new(read: R) -> Self {
+            Chars(read.bytes())
         }
     }
 
@@ -54,11 +53,15 @@ mod helpers {
         }
     }
 
-    impl<R: BufRead> Iterator for Chars<R> {
+    impl<R: Read> Iterator for Chars<R> {
         type Item = char;
 
         fn next(&mut self) -> Option<char> {
-            self.0.read(&mut self.1).ok().map(|_| self.1[0] as char)
+            if let Some(Ok(b)) = self.0.next() {
+                Some(b as char)
+            } else {
+                None
+            }
         }
     }
 }
