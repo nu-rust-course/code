@@ -29,7 +29,6 @@ pub fn suggest(trie: &trie::TrieMap<usize>, word: &str) -> Result {
     }
 
     let mut state = SearchState::new(word.len() + MAX_EDIT_DISTANCE);
-
     suggest_helper(trie.cursor(), &word_vec, 0, &mut state);
 
     if state.count > 0 {
@@ -39,12 +38,19 @@ pub fn suggest(trie: &trie::TrieMap<usize>, word: &str) -> Result {
     }
 }
 
+/// Represents the state of the search.
 struct SearchState {
-    buffer: String,     // Accumulates the current position in the trie
-    best:   String,     // The most frequent word we've found so far
-    count:  usize,      // The count of the best word we've found
+    /// Accumulates the current position in the trie
+    buffer: String,
+    /// The most frequent word we've found so far
+    best:   String,
+    /// The count of the best word we've found
+    count:  usize,
 }
 
+/// When we add a character to the search state buffer, we return a
+/// `NextState` guard object, which removes the character when it goes
+/// out of scope. This makes it easier to maintain the buffer.
 struct NextState<'a>(&'a mut SearchState);
 
 impl<'a> Drop for NextState<'a> {
@@ -53,6 +59,8 @@ impl<'a> Drop for NextState<'a> {
     }
 }
 
+// The contents of a `NextState` is a `SearchState,` and this allows us to
+// dereference and use the `SearchState` automatically.
 impl<'a> Deref for NextState<'a> {
     type Target = SearchState;
     fn deref(&self) -> &Self::Target { self.0 }
@@ -63,6 +71,11 @@ impl<'a> DerefMut for NextState<'a> {
 }
 
 impl SearchState {
+    /// Creates a new `SearchState` with the given buffer capacity.
+    /// This should be the maximum post-correction word length that we
+    /// might encounter. Because each edit can increase the length of
+    /// the word, that's the length of the original word plus the
+    /// maximum edit distance.
     fn new(bufsize: usize) -> Self {
         SearchState {
             buffer: String::with_capacity(bufsize),
@@ -71,11 +84,17 @@ impl SearchState {
         }
     }
 
+    /// Adds a character to the end of the buffer. The resulting
+    /// `NextState` object will remove the character when it gets
+    /// dropped.
     fn push(&mut self, c: usize) -> NextState {
         self.buffer.push(alphabet::code_char(c));
         NextState(self)
     }
 
+    /// Record in the search state that the current word in the buffer
+    /// has the given count. If this is better than we've seen before,
+    /// then we remember it.
     fn visit(&mut self, count: usize) {
         if count > self.count {
             self.count = count;
@@ -84,6 +103,33 @@ impl SearchState {
     }
 }
 
+/// Discovers suggestions by traversing the trie while applying edits.
+/// The idea is that we can descend the trie following the characters of
+/// a word, while at each step trying edits to the word. That is, we can
+///
+///  - descend the tree by following a character of the word,
+///
+///  - descend to an arbitrary child to implement insertion,
+///
+///  - skip a letter of the word and not descend to implement deletion,
+///
+///  - skip a letter and descend to an arbitrary child to implement
+///  changing a letter, or
+///
+///  - descend to the 1st letter, then the 0th letter, to implement
+///  transposition.
+///
+/// # Parameters
+///
+/// `cursor` – the current position in the trie where we are searching
+///
+/// `word` – the rest of the word to try to correct, represented as a
+/// sequence of alphabet indices
+///
+/// `dist` – the number of edits that have been applied so far
+///
+/// `state` – the search state, whose buffer should reflect the current
+/// position of `cursor`
 fn suggest_helper(cursor: trie::Cursor<usize>, word: &[usize],
                   dist: usize, state: &mut SearchState)
 {
