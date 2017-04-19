@@ -35,26 +35,26 @@ mod helpers {
     }
 
     pub fn train_from_file(file_name: &str) -> train::Freqs {
-        let chars = CharIter::open(file_name)
+        let chars = Chars::open(file_name)
                       .expect("couldn't open training file");
         train::build_freqs(chars)
     }
 
-    struct CharIter<R>(R, Vec<u8>);
+    struct Chars<R>(R, Vec<u8>);
 
-    impl<R: BufRead> CharIter<R> {
+    impl<R: BufRead> Chars<R> {
         fn new(buf_read: R) -> Self {
-            CharIter(buf_read, Vec::with_capacity(1))
+            Chars(buf_read, Vec::with_capacity(1))
         }
     }
 
-    impl CharIter<BufReader<File>> {
+    impl Chars<BufReader<File>> {
         fn open(filename: &str) -> Option<Self> {
             File::open(filename).ok().map(|f| Self::new(BufReader::new(f)))
         }
     }
 
-    impl<R: BufRead> Iterator for CharIter<R> {
+    impl<R: BufRead> Iterator for Chars<R> {
         type Item = char;
 
         fn next(&mut self) -> Option<char> {
