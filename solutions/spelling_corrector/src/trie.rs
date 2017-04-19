@@ -1,30 +1,36 @@
 use std::ops::Index;
 
-/// A trie has a root node, knows its branching factor, and has a field
-/// containing `None` that can be returned as a borrowed reference.
-#[derive(Debug)]
+/// A `TrieMap<T>` maps sequences of natural numbers to `T`s. The trie
+/// has a branching factor, `factor`, that determines the range of
+/// natural numbers accepted: [0, factor).
+#[derive(Debug, PartialEq, Eq)]
 pub struct TrieMap<T> {
+    /// The root node of the trie:
     node:   Box<Node<T>>,
+    /// The branching factor (size of the alphabet):
     factor: usize,
+    /// The value `None`, which allows us to return a `None` borrowed
+    /// from the map when necessary.
     none:   Option<T>,
 }
 
 /// A trie node may have a value, and has a vector of nullable pointers to
 /// child nodes.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 struct Node<T> {
     value:    Option<T>,
-    children: Vec<Option<Box<Node<T>>>>,
+    children: Box<[Option<Box<Node<T>>>]>,
 }
 
 /// A cursor marks a position in the trie and can be used to traverse it.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Cursor<'a, T: 'a> {
     node: &'a Node<T>,
 }
 
 /// A mutable cursor marks a position in the trie, and can be used to
-/// traverse and modify it.
+/// traverse and modify it the trie.
+#[derive(Debug)]
 pub struct CursorMut<'a, T: 'a> {
     node:   &'a mut Node<T>,
     factor: usize,
@@ -33,16 +39,16 @@ pub struct CursorMut<'a, T: 'a> {
 impl<T> Node<T> {
     /// Creates a new node with the given branching factor.
     fn new(factor: usize) -> Self {
-        let mut node = Node {
-            value:    None,
-            children: Vec::with_capacity(factor),
-        };
+        let mut children = Vec::with_capacity(factor);
 
         for _ in 0 .. factor {
-            node.children.push(None);
+            children.push(None);
         }
 
-        node
+        Node {
+            value:    None,
+            children: children.into_boxed_slice(),
+        }
     }
 
     /// Creates and boxes a new node with the given branching factor.
