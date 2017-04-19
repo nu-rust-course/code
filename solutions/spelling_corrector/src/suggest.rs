@@ -6,6 +6,8 @@ use std::ops::DerefMut;
 
 const MAX_EDIT_DISTANCE: usize = 2;
 
+/// A correction result: correct, incorrect and uncorrectable, or
+/// correctable with a suggestion.
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum Result {
     Correct,
@@ -13,19 +15,20 @@ pub enum Result {
     Suggestion(String)
 }
 
-// PRECONDITION: word only contains letters
+/// Given a trie representing the corpus and a word, produces a
+/// correction `Result` for the word.
+///
+/// # Errors
+///
+/// Panics if any characters in the word are not Roman letters.
 pub fn suggest(trie: &trie::TrieMap<usize>, word: &str) -> Result {
     let word_vec   = alphabet::to_char_codes(word);
 
-    if trie.contains(&*word_vec) {
+    if trie.contains(&word_vec) {
         return Result::Correct
     }
 
-    let mut state = SearchState {
-        buffer: String::with_capacity(word.len() + MAX_EDIT_DISTANCE),
-        best:   String::with_capacity(word.len() + MAX_EDIT_DISTANCE),
-        count:  0,
-    };
+    let mut state = SearchState::new(word.len() + MAX_EDIT_DISTANCE);
 
     suggest_helper(trie.cursor(), &word_vec, 0, &mut state);
 
@@ -60,6 +63,14 @@ impl<'a> DerefMut for NextState<'a> {
 }
 
 impl SearchState {
+    fn new(bufsize: usize) -> Self {
+        SearchState {
+            buffer: String::with_capacity(bufsize),
+            best:   String::with_capacity(bufsize),
+            count:  0,
+        }
+    }
+
     fn push(&mut self, c: usize) -> NextState {
         self.buffer.push(alphabet::code_char(c));
         NextState(self)
