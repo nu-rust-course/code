@@ -39,6 +39,10 @@ mod helpers {
         train::build_freqs(chars)
     }
 
+    // This is a hack for getting an iterator over the chars of a Read.
+    // We need it because Read::chars() is not yet stable. It works
+    // provided the input file is ASCII, but for 8 bit encodings it may
+    // not do the right thing.
     struct Chars<R>(Bytes<R>);
 
     impl<R: Read> Chars<R> {
