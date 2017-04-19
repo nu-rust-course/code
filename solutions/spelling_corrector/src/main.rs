@@ -6,7 +6,7 @@ fn main() {
     use helpers::*;
 
     let dict = train_from_file(&env::args().nth(1).expect("training file"));
-    correct_from_stdin(&dict);
+    correct(std::io::stdin(), &dict);
 }
 
 #[cfg(not(test))]
@@ -15,11 +15,10 @@ mod helpers {
     use std::io::{BufRead, BufReader, Bytes, Read};
     use std::fs::File;
 
-    pub fn correct_from_stdin(dict: &train::Freqs) {
-        use std::io;
+    pub fn correct<R: Read>(input: R, dict: &train::Freqs) {
         use spelling_corrector::suggest::Result::*;
 
-        let stdin = BufReader::new(io::stdin());
+        let stdin = BufReader::new(input);
 
         for mline in stdin.lines() {
             let untrimmed = mline.expect("a line of input");
