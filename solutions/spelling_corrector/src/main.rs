@@ -1,6 +1,5 @@
 extern crate spelling_corrector;
 
-#[cfg(not(test))]
 fn main() {
     use std::env;
     use helpers::*;
@@ -9,7 +8,6 @@ fn main() {
     correct(std::io::stdin(), &dict);
 }
 
-#[cfg(not(test))]
 mod helpers {
     use spelling_corrector::{train, suggest};
     use std::io::{BufRead, BufReader, Bytes, Read};
