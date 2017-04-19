@@ -29,7 +29,7 @@ pub fn correct<R: Read>(input: R, dict: &train::Freqs) {
 }
 
 pub fn train<R: Read>(input: R) -> train::Freqs {
-    let chars = Chars::new(BufReader::new(input));
+    let chars = Chars::new(input);
     train::build_freqs(chars)
 }
 
