@@ -107,7 +107,7 @@ impl SearchState {
 /// The idea is that we can descend the trie following the characters of
 /// a word, while at each step trying edits to the word. That is, we can
 ///
-///  - descend the tree by following a character of the word,
+///  - descend the trie by following a character of the word,
 ///
 ///  - descend to an arbitrary child to implement insertion,
 ///
@@ -156,7 +156,7 @@ fn suggest_helper(cursor: trie::Cursor<usize>, word: &[usize],
         // DELETION AND REPLACEMENT
         // If there's at least one character left in the word, we can try
         // deleting or replacing it. To delete, just skip a character and
-        // recur; to replace, try every possible child in the tree while
+        // recur; to replace, try every possible child in the trie while
         // skipping a character.
         if word.len() >= 1 {
             suggest_helper(cursor, &word[1..], dist + 1, state);
