@@ -1,4 +1,4 @@
-use super::util;
+use super::alphabet;
 use super::trie;
 use std::string::String;
 use std::ops::Deref;
@@ -15,7 +15,7 @@ pub enum Result {
 
 // PRECONDITION: word only contains letters
 pub fn suggest(trie: &trie::TrieMap<usize>, word: &str) -> Result {
-    let word_vec   = util::to_char_codes(word);
+    let word_vec   = alphabet::to_char_codes(word);
 
     if trie.contains(&*word_vec) {
         return Result::Correct
@@ -61,7 +61,7 @@ impl<'a> DerefMut for NextState<'a> {
 
 impl SearchState {
     fn push(&mut self, c: usize) -> NextState {
-        self.buffer.push(util::code_char(c));
+        self.buffer.push(alphabet::code_char(c));
         NextState(self)
     }
 
@@ -104,7 +104,7 @@ fn suggest_helper(cursor: trie::Cursor<usize>, word: &[usize],
         if word.len() >= 1 {
             suggest_helper(cursor, &word[1..], dist + 1, state);
 
-            for c in 0 .. util::NLETTERS {
+            for c in 0 .. alphabet::NLETTERS {
                 if let Some(cursor) = cursor.child(c) {
                     let mut state = state.push(c);
                     suggest_helper(cursor, &word[1..], dist + 1, &mut state);
@@ -128,7 +128,7 @@ fn suggest_helper(cursor: trie::Cursor<usize>, word: &[usize],
         // INSERTION
         // To insert, try descending to each child while not moving in
         // the word
-        for c in 0 .. util::NLETTERS {
+        for c in 0 .. alphabet::NLETTERS {
             if let Some(cursor) = cursor.child(c) {
                 let mut state = state.push(c);
                 suggest_helper(cursor, word, dist + 1, &mut state);

@@ -1,5 +1,5 @@
 use super::trie;
-use super::util::{char_code, NLETTERS};
+use super::alphabet::{char_code, NLETTERS};
 
 pub type Freqs = trie::TrieMap<usize>;
 
@@ -34,7 +34,7 @@ fn add_to_cursor<I>(mut cursor: trie::CursorMut<usize>, chars: &mut I)
 #[cfg(test)]
 mod test {
     use super::build_freqs;
-    use super::super::util::to_char_codes;
+    use super::super::alphabet::to_char_codes;
 
     #[test]
     fn test_build_simple() {
