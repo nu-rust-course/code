@@ -11,7 +11,9 @@ fn main() {
     correct(std::io::stdin(), &dict);
 }
 
-pub fn correct<R: Read>(input: R, dict: &train::Freqs) {
+// Corrects words, one per line, from `input`, using `dict` to check
+// them.
+fn correct<R: Read>(input: R, dict: &train::Freqs) {
     use spelling_corrector::suggest::Result::*;
 
     let stdin = BufReader::new(input);
@@ -28,7 +30,9 @@ pub fn correct<R: Read>(input: R, dict: &train::Freqs) {
     }
 }
 
-pub fn train<R: Read>(input: R) -> train::Freqs {
+// Trains the spell checker by reading the corpus from a Read and
+// returning the frequency trie.
+fn train<R: Read>(input: R) -> train::Freqs {
     let chars = Chars::new(input);
     train::build_freqs(chars)
 }
