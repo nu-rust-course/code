@@ -6,7 +6,7 @@ use std::ops::Index;
 #[derive(Debug, PartialEq, Eq)]
 pub struct TrieMap<T> {
     /// The root node of the trie:
-    node:   Box<Node<T>>,
+    node:   Node<T>,
     /// The branching factor (size of the alphabet):
     factor: usize,
     /// The value `None`, which allows us to return a `None` borrowed
@@ -49,11 +49,6 @@ impl<T> Node<T> {
             value:    None,
             children: children.into_boxed_slice(),
         }
-    }
-
-    /// Creates and boxes a new node with the given branching factor.
-    fn boxed(factor: usize) -> Box<Self> {
-        Box::new(Self::new(factor))
     }
 
     /// Converts this node into a cursor.
@@ -132,7 +127,7 @@ impl<'a, T> CursorMut<'a, T> {
         match &mut self.node.children[key] {
             &mut Some(ref mut child) => child,
             otherwise => {
-                *otherwise = Some(Node::boxed(self.factor));
+                *otherwise = Some(Box::new(Node::new(self.factor)));
                 otherwise.as_mut().unwrap()
             },
         }
@@ -143,7 +138,7 @@ impl<'a, T> CursorMut<'a, T> {
         match &mut self.node.children[key] {
             &mut Some(ref mut child) => child,
             otherwise => {
-                *otherwise = Some(Node::boxed(self.factor));
+                *otherwise = Some(Box::new(Node::new(self.factor)));
                 otherwise.as_mut().unwrap()
             },
         }
@@ -154,7 +149,7 @@ impl<'a, T> CursorMut<'a, T> {
 impl<T> TrieMap<T> {
     pub fn new(factor: usize) -> Self {
         TrieMap {
-            node:   Node::boxed(factor),
+            node:   Node::new(factor),
             factor: factor,
             none:   None,
         }
