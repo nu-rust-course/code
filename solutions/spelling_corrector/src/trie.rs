@@ -23,6 +23,8 @@ struct Node<T> {
 }
 
 /// A cursor marks a position in the trie and can be used to traverse it.
+/// In particular, we can find out the value at the current node, and we
+/// can descend to a child node based on the child index.
 #[derive(Copy, Clone, Debug)]
 pub struct Cursor<'a, T: 'a> {
     node: &'a Node<T>,
@@ -58,7 +60,7 @@ impl<T> Node<T> {
 
     /// Converts this mutable node into a mutable cursor with the given
     /// branching factor. (The branching factor is needed in order to
-    /// create new nodes.
+    /// create new nodes.)
     fn cursor_mut(&mut self, factor: usize) -> CursorMut<T> {
         CursorMut {
             node: &mut *self,
