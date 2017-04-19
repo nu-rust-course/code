@@ -34,8 +34,9 @@ mod helpers {
     }
 
     pub fn train_from_file(file_name: &str) -> train::Freqs {
-        let chars = Chars::open(file_name)
+        let file = File::open(file_name)
                       .expect("couldn't open training file");
+        let chars = Chars::new(BufReader::new(file));
         train::build_freqs(chars)
     }
 
@@ -48,12 +49,6 @@ mod helpers {
     impl<R: Read> Chars<R> {
         fn new(read: R) -> Self {
             Chars(read.bytes())
-        }
-    }
-
-    impl Chars<BufReader<File>> {
-        fn open(filename: &str) -> Option<Self> {
-            File::open(filename).ok().map(|f| Self::new(BufReader::new(f)))
         }
     }
 
