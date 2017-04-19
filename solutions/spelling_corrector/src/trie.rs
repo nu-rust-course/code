@@ -95,6 +95,8 @@ impl<'a, T> Cursor<'a, T> {
     }
 
     /// Updates this cursor to point to the `key`th child.
+    /// Returns whether the cursor actually moved; the result will be
+    /// `false` if the child doesn't exist.
     pub fn descend(&mut self, key: usize) -> bool {
         match self.child(key) {
             None         => false,
@@ -114,7 +116,7 @@ impl<'a, T> CursorMut<'a, T> {
         &mut self.node.value
     }
 
-    /// Gets a cursor to the `key`th child.
+    /// Borrows a cursor to the `key`th child.
     pub fn child(&'a mut self, key: usize) -> Option<Self> {
         let factor = self.factor;
         self.node.children[key].as_mut().map(|n| n.cursor_mut(factor))
@@ -126,6 +128,8 @@ impl<'a, T> CursorMut<'a, T> {
         self.node.children[key].as_mut().map(|n| n.cursor_mut(factor))
     }
 
+    /// Adds a child at the given key position, if there isn't one
+    /// already, and returns a `CursorMut` pointing to the child.
     pub fn child_add(&'a mut self, key: usize) -> Self {
         match &mut self.node.children[key] {
             &mut Some(ref mut child) => child,
@@ -137,6 +141,9 @@ impl<'a, T> CursorMut<'a, T> {
         .cursor_mut(self.factor)
     }
 
+    /// Consumes the cursor and adds a child at the given key position,
+    /// if there isn't one already, and returns a `CursorMut` pointing
+    /// to the child.
     pub fn into_child_add(self, key: usize) -> Self {
         match &mut self.node.children[key] {
             &mut Some(ref mut child) => child,
@@ -150,6 +157,7 @@ impl<'a, T> CursorMut<'a, T> {
 }
 
 impl<T> TrieMap<T> {
+    /// Creates a new, empty `TrieMap` with the given branching factor.
     pub fn new(factor: usize) -> Self {
         TrieMap {
             node:   Node::new(factor),
@@ -158,20 +166,23 @@ impl<T> TrieMap<T> {
         }
     }
 
+    /// Returns a cursor pointing to the root of the trie.
     pub fn cursor(&self) -> Cursor<T> {
         self.node.cursor()
     }
 
+    /// Returns a mutable cursor pointing to the root of the trie.
     pub fn cursor_mut(&mut self) -> CursorMut<T> {
         self.node.cursor_mut(self.factor)
     }
 
+    /// Checks whether the trie contains a particular key.
     pub fn contains(&self, key: &[usize]) -> bool {
         self[key].is_some()
     }
 }
 
-impl<'b, T> Index<&'b [usize]> for TrieMap<T> {
+impl<'a, T> Index<&'a [usize]> for TrieMap<T> {
     type Output = Option<T>;
 
     fn index(&self, key: &[usize]) -> &Option<T> {
