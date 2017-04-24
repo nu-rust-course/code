@@ -5,7 +5,7 @@ use std::cmp::{min,max};
 use std::collections::LinkedList;
 use std::fmt::{self, Display};
 use std::io::{self, Write};
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::sync::mpsc::{sync_channel, SyncSender};
 use std::thread;
 use std::time::Duration;
@@ -125,12 +125,22 @@ const DP_CSLATENCY_MIN: u64 = 125;
 const DP_CSLATENCY_MAX: u64 = 250;
 const DP_SLEEP_MIN: u64 = 250;
 const DP_SLEEP_MAX: u64 = 1000;
-const DP_EAT_MIN: u64 = 500;
-const DP_EAT_MAX: u64 = 750;
+const DP_EAT_MIN: u64 = 250;
+const DP_EAT_MAX: u64 = 500;
 
 fn sleep<N: Display>(who: N) {
     println!("Philosopher {} goes to sleep", who);
     random_sleep(DP_SLEEP_MIN, DP_SLEEP_MAX);
+    println!("Philosopher {} wakes up", who);
+}
+
+fn pick_up<N: Display>(who: N, cs: &Arc<Mutex<Chopstick>>)
+                       -> MutexGuard<Chopstick>
+{
+    let guard = cs.lock().unwrap();
+    println!("Philosopher {} picks up {}", who, *guard);
+    random_sleep(DP_CSLATENCY_MIN, DP_CSLATENCY_MAX);
+    guard
 }
 
 fn eat<N: Display>(who: N, cs1: &mut Chopstick, cs2: &mut Chopstick) {
@@ -140,18 +150,17 @@ fn eat<N: Display>(who: N, cs1: &mut Chopstick, cs2: &mut Chopstick) {
 }
 
 fn two_dining_philosophers() {
-    let cs_a = Arc::new(Mutex::new(Chopstick::new("A")));
-    let cs_b = Arc::new(Mutex::new(Chopstick::new("B")));
+    let cs_a1 = Arc::new(Mutex::new(Chopstick::new("A")));
+    let cs_b1 = Arc::new(Mutex::new(Chopstick::new("B")));
 
-    let cs_a2 = cs_a.clone();
-    let cs_b2 = cs_b.clone();
+    let cs_a2 = cs_a1.clone();
+    let cs_b2 = cs_b1.clone();
 
     let philosopher1 = thread::spawn(move|| {
         loop {
             {
-                let mut guard_a = cs_a.lock().unwrap();
-                random_sleep(DP_CSLATENCY_MIN, DP_CSLATENCY_MAX);
-                let mut guard_b = cs_b.lock().unwrap();
+                let mut guard_a = pick_up(1, &cs_a1);
+                let mut guard_b = pick_up(1, &cs_b1);
                 eat(1, &mut guard_a, &mut guard_b);
             }
 
@@ -162,9 +171,8 @@ fn two_dining_philosophers() {
     let philosopher2 = thread::spawn(move|| {
         loop {
             {
-                let mut guard_a = cs_a2.lock().unwrap();
-                random_sleep(DP_CSLATENCY_MIN, DP_CSLATENCY_MAX);
-                let mut guard_b = cs_b2.lock().unwrap();
+                let mut guard_a = pick_up(2, &cs_a2);
+                let mut guard_b = pick_up(2, &cs_b2);
                 eat(2, &mut guard_a, &mut guard_b);
             }
 
@@ -188,12 +196,8 @@ fn dining_philosophers(n: usize) {
         thread::spawn(move|| {
             loop {
                 {
-                    let mut guard_i = cs_i.lock().unwrap();
-                    println!("Philosopher {} picks up {}", i, *guard_i);
-                    random_sleep(DP_CSLATENCY_MIN, DP_CSLATENCY_MAX);
-                    let mut guard_j = cs_j.lock().unwrap();
-                    println!("Philosopher {} picks up {}", i, *guard_j);
-
+                    let mut guard_i = pick_up(i, &cs_i);
+                    let mut guard_j = pick_up(i, &cs_j);
                     eat(i, &mut guard_i, &mut guard_j);
                 }
 
@@ -409,7 +413,7 @@ fn main() {
     // mutex_demo(10);
 
     // two_dining_philosophers();
-    // dining_philosophers(5);
+    dining_philosophers(5);
 
     // condvar_demo(5);
 
