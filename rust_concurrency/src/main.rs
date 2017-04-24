@@ -67,6 +67,26 @@ fn n_counters(n: usize) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+const MUTEX_DEMO_SLEEP: u64 = 100;
+
+fn mutex_demo(nthreads: usize) {
+    let counter = Arc::new(Mutex::new(0));
+
+    for i in 0 .. nthreads {
+        let counter = counter.clone();
+
+        thread::spawn(move || {
+            thread::sleep(Duration::from_millis(MUTEX_DEMO_SLEEP));
+
+            let mut guard = counter.lock().unwrap();
+            println!("Thread {} sees counter = {}", i, *guard);
+            *guard += 1;
+        });
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 /// Sleeps for between min and max milliseconds
 fn random_sleep(min: u64, max: u64) {
     let range  = Range::new(min, max + 1);
@@ -383,8 +403,10 @@ fn sleeping_barbers() {
 ///////////////////////////////////////////////////////////////////////////////
 
 fn main() {
-    two_counters();
+    // two_counters();
     // n_counters(5);
+
+    // mutex_demo(10);
 
     // two_dining_philosophers();
     // dining_philosophers(5);
