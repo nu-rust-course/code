@@ -134,9 +134,7 @@ fn sleep<N: Display>(who: N) {
     println!("Philosopher {} wakes up", who);
 }
 
-fn pick_up<N: Display>(who: N, cs: &Arc<Mutex<Chopstick>>)
-                       -> MutexGuard<Chopstick>
-{
+fn pick_up<N: Display>(who: N, cs: &Mutex<Chopstick>) -> MutexGuard<Chopstick> {
     let guard = cs.lock().unwrap();
     println!("Philosopher {} picks up {}", who, *guard);
     random_sleep(DP_CSLATENCY_MIN, DP_CSLATENCY_MAX);
@@ -190,23 +188,50 @@ fn dining_philosophers(n: usize) {
     for i in 0 .. n {
         let j = (i + 1) % n;
 
-        let cs_i = chopsticks[min(i, j)].clone();
-        let cs_j = chopsticks[max(i, j)].clone();
+        let cs1 = chopsticks[min(i, j)].clone();
+        let cs2 = chopsticks[max(i, j)].clone();
 
         thread::spawn(move|| {
             loop {
                 {
-                    let mut guard_i = pick_up(i, &cs_i);
-                    let mut guard_j = pick_up(i, &cs_j);
-                    eat(i, &mut guard_i, &mut guard_j);
+                    let mut guard1 = pick_up(i, &cs1);
+                    let mut guard2 = pick_up(i, &cs2);
+                    eat(i, &mut guard1, &mut guard2);
                 }
 
                 sleep(i);
             }
         });
-
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+fn dining_philosophers_one_arc(n: usize) {
+    let chopsticks: Arc<Vec<Mutex<Chopstick>>> =
+        Arc::new((0 .. n).map(|i| Mutex::new(Chopstick::new(i))).collect());
+
+    for i in 0 .. n {
+        let chopsticks = chopsticks.clone();
+
+        thread::spawn(move|| {
+            loop {
+                let j   = (i + 1) % n;
+                let cs1 = &chopsticks[min(i, j)];
+                let cs2 = &chopsticks[max(i, j)];
+
+                {
+                    let mut guard1 = pick_up(i, &cs1);
+                    let mut guard2 = pick_up(i, &cs2);
+                    eat(i, &mut guard1, &mut guard2);
+                }
+
+                sleep(i);
+            }
+        });
+    }
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -245,22 +270,29 @@ const HAIRCUT_MAX: u64 = 1000;
 const ARRIVAL_MIN: u64 = 150;
 const ARRIVAL_MAX: u64 = 250;
 
+#[derive(Debug)]
+struct BarberState {
+    free_seats:      Mutex<usize>,
+    customers_ready: Semaphore,
+    barber_ready:    Semaphore,
+}
+
 fn sleeping_barber() {
-    let free_seats      = Arc::new(Mutex::new(SEATS));
-    let customers_ready = Arc::new(Semaphore::new(0));
-    let barber_ready    = Arc::new(Semaphore::new(0));
+    let state = Arc::new(BarberState {
+        free_seats:      Mutex::new(SEATS),
+        customers_ready: Semaphore::new(0),
+        barber_ready:    Semaphore::new(0),
+    });
 
     // Barber
     {
-        let free_seats = free_seats.clone();
-        let customers_ready = customers_ready.clone();
-        let barber_ready = barber_ready.clone();
+        let state = state.clone();
 
         thread::spawn(move|| {
             loop {
-                barber_ready.raise();
-                customers_ready.lower();
-                *free_seats.lock().unwrap() += 1;
+                state.barber_ready.raise();
+                state.customers_ready.lower();
+                *state.free_seats.lock().unwrap() += 1;
 
                 println!("Barber begins cutting");
                 random_sleep(HAIRCUT_MIN, HAIRCUT_MAX);
@@ -269,17 +301,16 @@ fn sleeping_barber() {
         });
     }
 
+    // Customers
     thread::spawn(move|| {
         for i in 0 .. {
             random_sleep(ARRIVAL_MIN, ARRIVAL_MAX);
 
-            let free_seats = free_seats.clone();
-            let customers_ready = customers_ready.clone();
-            let barber_ready = barber_ready.clone();
+            let state = state.clone();
 
             thread::spawn(move|| {
                 {
-                    let mut free_seats_guard = free_seats.lock().unwrap();
+                    let mut free_seats_guard = state.free_seats.lock().unwrap();
 
                     if *free_seats_guard == 0 {
                         println!("Customer {} gives up", i);
@@ -287,11 +318,11 @@ fn sleeping_barber() {
                     } else {
                         println!("Customer {} sits down", i);
                         *free_seats_guard -= 1;
-                        customers_ready.raise();
+                        state.customers_ready.raise();
                     }
                 }
 
-                barber_ready.lower();
+                state.barber_ready.lower();
                 println!("Customer {} begins getting cut", i);
             });
         }
@@ -413,7 +444,8 @@ fn main() {
     // mutex_demo(10);
 
     // two_dining_philosophers();
-    dining_philosophers(5);
+    // dining_philosophers(5);
+    // dining_philosophers_one_arc(5);
 
     // condvar_demo(5);
 
