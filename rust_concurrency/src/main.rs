@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use std::cmp::{min,max};
+use std::cmp::{min, max};
 use std::collections::LinkedList;
 use std::fmt::{self, Display};
 use std::io::{self, Write};
