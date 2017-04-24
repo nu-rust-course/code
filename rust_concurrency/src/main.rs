@@ -4,11 +4,13 @@
 use std::cmp::{min,max};
 use std::collections::LinkedList;
 use std::fmt::{self, Display};
-use std::io::{self,Write};
-use std::sync::{Arc,Condvar,Mutex};
+use std::io::{self, Write};
+use std::sync::{Arc, Condvar, Mutex};
 use std::sync::mpsc::{sync_channel, SyncSender};
 use std::thread;
 use std::time::Duration;
+
+use rand::distributions::{IndependentSample, Range};
 
 use semaphore::Semaphore;
 
@@ -18,6 +20,7 @@ mod semaphore;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/// Waits for the user to press Enter.
 fn wait_for_enter() {
     println!("Press enter to continue");
     io::stdout().flush().expect("flush");
@@ -30,16 +33,16 @@ fn wait_for_enter() {
 
 const COUNT_TO_DELAY: u64 = 500;
 
-// Counts from 1 to n, printing each
+/// Counts from 1 to n, printing each
 fn count_to(who: usize, n: usize)
 {
-    for i in 1 .. (n + 1) {
+    for i in 1 .. n + 1 {
         thread::sleep(Duration::from_millis(COUNT_TO_DELAY));
         println!("{} says {}", who, i);
     }
 }
 
-// Starts two counters concurrently
+/// Starts two counters concurrently, then waits for each to finish.
 fn two_counters() {
     let n = 5;
     let handle1 = thread::spawn(move || count_to(1, n));
@@ -49,6 +52,7 @@ fn two_counters() {
     handle2.join().unwrap();
 }
 
+/// Starts `n` counters concurrently, then waits for each to finish.
 fn n_counters(n: usize) {
     let mut handles = vec![];
 
@@ -63,10 +67,10 @@ fn n_counters(n: usize) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Sleeps for for between min and max milliseconds
+/// Sleeps for between min and max milliseconds
 fn random_sleep(min: u64, max: u64) {
-    let millis = if min == max {min}
-                 else {min + (rand::random::<u64>() % (max - min))};
+    let range  = Range::new(min, max + 1);
+    let millis = range.ind_sample(&mut rand::thread_rng());
     thread::sleep(Duration::from_millis(millis));
 }
 
@@ -85,24 +89,24 @@ impl Chopstick {
         }
     }
 
-    fn eat(&mut self) {
+    fn eat_with(&mut self, other: &mut Chopstick) {
         self.uses += 1;
+        other.uses += 1;
     }
 }
 
 impl Display for Chopstick {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        fmt.write_fmt(format_args!("chopstick {} (use {})",
-                                   self.which, self.uses))
+        write!(fmt, "chopstick {} ({} uses)", self.which, self.uses)
     }
 }
 
 const DP_CSLATENCY_MIN: u64 = 125;
 const DP_CSLATENCY_MAX: u64 = 250;
 const DP_SLEEP_MIN: u64 = 250;
-const DP_SLEEP_MAX: u64 = 500;
-const DP_EAT_MIN: u64 = 2000;
-const DP_EAT_MAX: u64 = 3000;
+const DP_SLEEP_MAX: u64 = 1000;
+const DP_EAT_MIN: u64 = 500;
+const DP_EAT_MAX: u64 = 750;
 
 fn sleep<N: Display>(who: N) {
     println!("Philosopher {} goes to sleep", who);
@@ -110,9 +114,9 @@ fn sleep<N: Display>(who: N) {
 }
 
 fn eat<N: Display>(who: N, cs1: &mut Chopstick, cs2: &mut Chopstick) {
-    cs1.eat(); cs2.eat();
+    cs1.eat_with(cs2);
     println!("Philosopher {} eats with {} and {}", who, cs1, cs2);
-    random_sleep(DP_SLEEP_MIN, DP_SLEEP_MAX);
+    random_sleep(DP_EAT_MIN, DP_EAT_MAX);
 }
 
 fn two_dining_philosophers() {
@@ -278,7 +282,7 @@ fn sleeping_barber_2() {
 
     // Barber
     {
-        let seats        = seats.clone();
+        let seats           = seats.clone();
         let customers_ready = customers_ready.clone();
 
         thread::spawn(move|| {
@@ -379,17 +383,17 @@ fn sleeping_barbers() {
 ///////////////////////////////////////////////////////////////////////////////
 
 fn main() {
+    two_counters();
     // n_counters(5);
-    // refcounting();
-    // two_dining_philosophers();
 
+    // two_dining_philosophers();
     // dining_philosophers(5);
 
     // condvar_demo(5);
 
     // sleeping_barber();
     // sleeping_barber_2();
-    sleeping_barbers();
+    // sleeping_barbers();
 
     wait_for_enter();
 }
