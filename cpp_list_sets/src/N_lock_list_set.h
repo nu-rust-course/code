@@ -45,13 +45,15 @@ protected:
         return *ptr;
     }
 
+    // Note: This implementation is faulty. For a correct implementation,
+    // see HoH_list_set.h.
+    //
     // Like `find_predecessor`, finds the predecessor node of the first node
-    // whose element is not less than `key`. Performs hand-over-hand
-    // locking, with the postcondition that the mutexes on both the result node
-    // and its successor are held, guaranteeing that neither is deleted.
-    // Returns a triple of the reference to the predecessor node, the guard
-    // for that node, and the guard for its successor. Destruction of the
-    // guards will unlock the mutexes.
+    // whose element is not less than `key`. Locks each node as it traverses it,
+    // with the postcondition that the lock on the returned node is held.
+    // This faulty implementation returns a triple of the reference to the
+    // predecessor node, the guard for that node, and an empty guard.
+    // Destruction of the guard will unlock the mutex.
     virtual std::tuple<Node*, guard_t, guard_t>
     find_predecessor_locking(const T& key) const
     {
@@ -74,12 +76,8 @@ protected:
 public:
     N_lock_list_set()
     {
-        std::unique_ptr<Node> tail{new Node{}};
-        std::unique_ptr<Node> head{new Node{}};
-
-        head->next = std::move(tail);
-
-        link_ = std::move(head);
+        link_       = std::make_unique<Node>(); // head sentinel
+        link_->next = std::make_unique<Node>(); // tail sentinel
     }
 
     virtual bool member(const T& key) const override
@@ -108,7 +106,7 @@ public:
 
         if (matches(*prev, key)) return false;
 
-        std::unique_ptr<Node> new_node{new Node{}};
+        std::unique_ptr<Node> new_node = std::make_unique<Node>();
         new_node->element = std::move(key);
         new_node->next    = std::move(prev->next);
         prev->next        = std::move(new_node);

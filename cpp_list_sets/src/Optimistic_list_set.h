@@ -66,7 +66,7 @@ public:
             if (validate(&prev, &*prev.next)) {
                 if (super::matches(prev, key)) return false;
 
-                std::unique_ptr<Node> new_node{new Node{}};
+                std::unique_ptr<Node> new_node = std::make_unique<Node>();
                 new_node->element = std::move(key);
                 new_node->next    = std::move(prev.next);
                 prev.next         = std::move(new_node);

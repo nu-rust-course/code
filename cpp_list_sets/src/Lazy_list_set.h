@@ -61,12 +61,8 @@ protected:
 public:
     Lazy_list_set()
     {
-        std::unique_ptr<Node> tail{new Node{}};
-        std::unique_ptr<Node> head{new Node{}};
-
-        head->next = std::move(tail);
-
-        link_ = std::move(head);
+        link_ = std::make_unique<Node>();
+        link_->next = std::make_unique<Node>();
     }
 
     virtual bool member(const T& key) const override
@@ -102,7 +98,7 @@ public:
             if (validate(&prev, &*prev.next)) {
                 if (matches(prev, key)) return false;
 
-                std::unique_ptr<Node> new_node{new Node{}};
+                std::unique_ptr<Node> new_node = std::make_unique<Node>();
                 new_node->element = std::move(key);
                 new_node->next    = std::move(prev.next);
                 prev.next         = std::move(new_node);
@@ -112,6 +108,7 @@ public:
         }
     }
 
+protected:
     virtual const Node* head() const override
     {
         return &*link_;

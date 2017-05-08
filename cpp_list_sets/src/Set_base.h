@@ -12,8 +12,6 @@ public:
     virtual bool member(const T&) const =0;
     virtual bool remove(const T&)       =0;
 
-    virtual const Node_base<T>* head() const =0;
-
     virtual std::ostream& format_to(std::ostream& os) const
     {
         const Node_base<T>* node = head()->get_next();
@@ -31,6 +29,9 @@ public:
     }
 
     virtual ~Set_base() { }
+
+protected:
+    virtual const Node_base<T>* head() const =0;
 };
 
 template <typename T>

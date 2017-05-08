@@ -49,8 +49,8 @@ protected:
 public:
     List_set()
     {
-        std::unique_ptr<Node> tail{new Node{}};
-        std::unique_ptr<Node> head{new Node{}};
+        std::unique_ptr<Node> tail = std::make_unique<Node>();
+        std::unique_ptr<Node> head = std::make_unique<Node>();
 
         head->next = std::move(tail);
 
@@ -77,7 +77,7 @@ public:
         auto& prev = find_predecessor(key);
         if (matches(prev, key)) return false;
 
-        std::unique_ptr<Node> new_node{new Node{}};
+        std::unique_ptr<Node> new_node = std::make_unique<Node>();
         new_node->element = std::move(key);
         new_node->next    = std::move(prev.next);
         prev.next         = std::move(new_node);
@@ -85,6 +85,7 @@ public:
         return true;
     }
 
+protected:
     virtual const Node_base<T>* head() const override
     {
         return &*link_;

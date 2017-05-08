@@ -161,6 +161,7 @@ public:
         return true;
     }
 
+protected:
     virtual const Node* head() const override
     {
         return &*link_;

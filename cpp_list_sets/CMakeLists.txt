@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.3)
 project(listset CXX)
-include(.eecs230/CMakeLists.txt)
+include(.eecs395/CMakeLists.txt)
 
 add_test_program(Set_tests test/Set_tests.cpp
         src/Node_base.h
