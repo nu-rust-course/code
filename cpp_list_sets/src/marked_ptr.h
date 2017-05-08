@@ -156,7 +156,7 @@ public:
 
     bool mark(SYNC) const noexcept
     {
-        return load().mark();
+        return load(sync).mark();
     }
 
     void store(contents_t val, SYNC) noexcept
