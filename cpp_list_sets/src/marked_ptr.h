@@ -118,7 +118,7 @@ public:
 
     // Forward any marked_ptr constructor arguments.
     template<typename... Args>
-    atomic_marked_ptr(Args... args) noexcept
+    explicit atomic_marked_ptr(Args... args) noexcept
             : base_{contents_t{std::forward(args)...}.word_}
     { }
 
@@ -164,12 +164,12 @@ public:
         base_.store(val.word_, sync);
     }
 
-    void ptr(T* ptr, SYNC) noexcept
+    void set_ptr(T* ptr, SYNC) noexcept
     {
         store({ptr, mark()}, sync);
     }
 
-    void mark(bool mark, SYNC) noexcept
+    void set_mark(bool mark, SYNC) noexcept
     {
         store({ptr(), mark}, sync);
     }

@@ -142,7 +142,7 @@ public:
     {
         Node* node = new Node;
         node->element = std::move(key);
-        node->link.mark(false);
+        node->link.set_mark(false);
 
         retry:
 
@@ -151,7 +151,7 @@ public:
 
         if (matches(curr, key)) return false;
 
-        node->link.ptr(&curr);
+        node->link.set_ptr(&curr);
 
         if (! prev.link.compare_and_set_weak(&curr, node, false, false))
             goto retry;
