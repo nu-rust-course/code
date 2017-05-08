@@ -58,13 +58,13 @@ public:
         return unpack_mark(word_);
     }
 
-    marked_ptr& ptr(T* ptr)
+    marked_ptr& set_ptr(T* ptr)
     {
         word_ = pack(ptr, mark());
         return *this;
     }
 
-    marked_ptr& mark(bool mark)
+    marked_ptr& set_mark(bool mark)
     {
         word_ = pack(ptr(), mark);
         return *this;
@@ -213,7 +213,7 @@ public:
                               std::memory_order success,
                               std::memory_order failure) noexcept
     {
-        contents_t expected{old_ptr, old_mark};
+
         return compare_exchange_weak(expected, {new_ptr, new_mark},
                                      success, failure);
     }

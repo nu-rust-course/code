@@ -19,7 +19,7 @@ TEST(FillAndChange)
     CHECK_EQUAL(false, mp.mark());
     CHECK_EQUAL(false, bool{mp});
 
-    mp.mark(true);
+    mp.set_mark(true);
 
     CHECK_EQUAL(&a, mp.pointer());
     CHECK_EQUAL(true, mp.mark());

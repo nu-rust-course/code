@@ -3,6 +3,7 @@ project(listset CXX)
 include(.eecs395/CMakeLists.txt)
 
 add_test_program(Set_tests test/Set_tests.cpp
+        src/Fake_atomic.h
         src/Node_base.h
         src/Set_base.h
         src/List_set.h
