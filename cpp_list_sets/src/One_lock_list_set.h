@@ -35,7 +35,7 @@ public:
         return super::insert(key);
     }
 
-    virtual std::ostream& format_to(std::ostream& os)
+    virtual std::ostream& format_to(std::ostream& os) const override
     {
         guard_t guard{lock_};
         return super::format_to(os);

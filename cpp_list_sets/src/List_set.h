@@ -43,18 +43,14 @@ protected:
 
     bool matches(const Node& prev, const T& key) const
     {
-        return !prev.next->is_last() && prev.next->element  == key;
+        return !prev.next->is_last() && prev.next->element == key;
     }
 
 public:
     List_set()
     {
-        std::unique_ptr<Node> tail = std::make_unique<Node>();
-        std::unique_ptr<Node> head = std::make_unique<Node>();
-
-        head->next = std::move(tail);
-
-        link_ = std::move(head);
+        link_       = std::make_unique<Node>(); // head sentinel
+        link_->next = std::make_unique<Node>(); // tail sentinel
     }
 
     virtual bool member(const T& key) const override
