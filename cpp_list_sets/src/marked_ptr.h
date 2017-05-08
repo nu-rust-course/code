@@ -6,6 +6,10 @@
 
 #define SYNC  std::memory_order sync = std::memory_order_seq_cst
 
+// Forward declaration:
+template<typename T>
+class atomic_marked_ptr;
+
 /*
  * This is really a utility class for atomic<marked_ptr<T>> below, which is
  * the main event. The idea is that we want an atomic variable that holds
@@ -91,30 +95,30 @@ public:
     }
 
 private:
-    friend class std::atomic<marked_ptr<T>>;
+    friend class atomic_marked_ptr<T>;
 
     explicit marked_ptr(uintptr_t word) noexcept : word_{word}
     { }
 };
 
 template<typename T>
-class std::atomic<marked_ptr<T>>
+class atomic_marked_ptr
 {
     // Representation:
-    atomic <uintptr_t> base_;
+    std::atomic<uintptr_t> base_;
 
 public:
     using contents_t = marked_ptr<T>;
 
-    atomic() noexcept = default;
+    atomic_marked_ptr() noexcept = default;
 
-    atomic(const atomic&) = delete;
+    atomic_marked_ptr(const atomic_marked_ptr&) = delete;
 
-    atomic& operator=(const atomic&) = delete;
+    atomic_marked_ptr& operator=(const atomic_marked_ptr&) = delete;
 
     // Forward any marked_ptr constructor arguments.
     template<typename... Args>
-    atomic(Args... args) noexcept
+    atomic_marked_ptr(Args... args) noexcept
             : base_{contents_t{std::forward(args)...}.word_}
     { }
 
@@ -213,7 +217,7 @@ public:
                               std::memory_order success,
                               std::memory_order failure) noexcept
     {
-
+        contents_t expected{old_ptr, old_mark};
         return compare_exchange_weak(expected, {new_ptr, new_mark},
                                      success, failure);
     }

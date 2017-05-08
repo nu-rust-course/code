@@ -21,7 +21,7 @@ protected:
     ///
 
     struct Node;
-    using link_t  = std::atomic<marked_ptr<Node>>;
+    using link_t  = atomic_marked_ptr<Node>;
 
     struct Node : Node_base<T> {
         T      element;
@@ -68,8 +68,9 @@ protected:
                                                       false, false))
                     goto retry;
 
+                Node* next = curr->get_next();
                 delete curr;
-                curr = curr->get_next();
+                curr = next;
             }
 
             if (curr->element >= key || curr->is_last()) return *prev;
@@ -92,11 +93,8 @@ protected:
 public:
     Lock_free_list_set()
     {
-        marked_ptr<Node> tail{new Node{}, false};
-        marked_ptr<Node> head{new Node{}, false};
-
-        head->link = tail;
-        link_      = head;
+        link_ = marked_ptr<Node>{new Node{}, false};
+        link_->link = marked_ptr<Node>{new Node{}, false};
     }
 
     ~Lock_free_list_set()
