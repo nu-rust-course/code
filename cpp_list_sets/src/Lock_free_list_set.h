@@ -27,11 +27,11 @@ protected:
         T      element;
         link_t link;
 
-        const T& get_element() const {
+        virtual const T& get_element() const final override {
             return element;
         }
 
-        const Node* get_next() const {
+        virtual const Node* get_next() const final override {
             return link.ptr();
         }
 
@@ -60,9 +60,10 @@ protected:
         retry:
 
         Node* prev = link_.ptr();
-        Node* curr = prev->link.ptr();
 
         for (;;) {
+            Node* curr = prev->get_next();
+
             while (curr->get_mark()) {
                 if (! prev->link.compare_and_set_weak(curr, curr->get_next(),
                                                       false, false))
@@ -76,7 +77,6 @@ protected:
             if (curr->element >= key || curr->is_last()) return *prev;
 
             prev = curr;
-            curr = curr->get_next();
         }
     }
 
@@ -110,32 +110,33 @@ public:
 
     virtual bool member(const T& key) const override
     {
-        for (auto curr = link_->get_next();
-             !curr->is_last();
-             curr = curr->get_next())
-            if (key <= curr->element) return matches_unmarked(*curr, key);
+        Node* curr = link_->get_next();
 
-        return false;
+        while (!curr->is_last() && key > curr->element) {
+            curr = curr->get_next();
+        }
+
+        return matches_unmarked(*curr, key);
     }
 
     virtual bool remove(const T& key) override
     {
-        retry:
+        for (;;) {
+            Node& prev = find_predecessor_deleting(key);
+            Node& curr = *prev.link;
 
-        Node& prev = find_predecessor_deleting(key);
-        Node& curr = *prev.link;
+            if (!matches(curr, key)) return false;
 
-        if (!matches(curr, key)) return false;
+            Node& next = *curr.link;
 
-        Node& next = *curr.link;
+            if (curr.link.compare_and_set_weak(&next, &next, false, true)) {
+                if (prev.link.compare_and_set_strong(
+                        &curr, &next, false, false))
+                    delete &curr;
 
-        if (! curr.link.compare_and_set_weak(&next, &next, false, true))
-            goto retry;
-
-        if (prev.link.compare_and_set_strong(&curr, &next, false, false))
-            delete &curr;
-
-        return true;
+                return true;
+            }
+        }
     }
 
     virtual bool insert(T key) override
@@ -144,19 +145,20 @@ public:
         node->element = std::move(key);
         node->link.set_mark(false);
 
-        retry:
+        for (;;) {
+            Node& prev = find_predecessor_deleting(key);
+            Node& curr = *prev.link;
 
-        Node& prev = find_predecessor_deleting(key);
-        Node& curr = *prev.link;
+            if (matches(curr, key)) {
+                delete node;
+                return false;
+            }
 
-        if (matches(curr, key)) return false;
+            node->link.set_ptr(&curr);
 
-        node->link.set_ptr(&curr);
-
-        if (! prev.link.compare_and_set_weak(&curr, node, false, false))
-            goto retry;
-
-        return true;
+            if (prev.link.compare_and_set_weak(&curr, node, false, false))
+                return true;
+        }
     }
 
 protected:

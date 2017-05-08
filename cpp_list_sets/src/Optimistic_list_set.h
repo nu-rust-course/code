@@ -14,15 +14,15 @@ template <typename T>
 class Optimistic_list_set : public N_lock_list_set<T>
 {
 protected:
+    using guard_t = std::lock_guard<std::mutex>;
     using super = N_lock_list_set<T>;
     using typename super::Node;
-    using typename super::guard_t;
     using super::link_;
 
     bool validate(const Node* prev, const Node* curr) const
     {
         for (const Node* node = &*link_; !node->is_last(); node = &*node->next)
-            if (node == prev) return (&*node->next == curr);
+            if (node == prev) return &*node->next == curr;
 
         return false;
     }

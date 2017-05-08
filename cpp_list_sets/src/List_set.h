@@ -33,10 +33,10 @@ protected:
     // belongs between the result and its successor.
     virtual Node& find_predecessor(const T& key) const
     {
-        Node* ptr;
+        Node* ptr = &*link_;
 
-        for (ptr = &*link_; !ptr->next->is_last(); ptr = &*ptr->next)
-            if (key <= ptr->next->element) break;
+        while (!ptr->next->is_last() && key > ptr->next->element)
+            ptr = &*ptr->next;
 
         return *ptr;
     }

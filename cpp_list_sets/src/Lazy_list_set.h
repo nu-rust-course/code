@@ -16,7 +16,7 @@ class Lazy_list_set : public Set_base<T>
 protected:
     struct Node;
     using link_t  = std::unique_ptr<Node>;
-    using guard_t = std::unique_lock<std::mutex>;
+    using guard_t = std::lock_guard<std::mutex>;
 
     struct Node : Node_base<T> {
         T          element;

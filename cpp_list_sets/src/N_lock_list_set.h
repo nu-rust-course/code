@@ -62,7 +62,7 @@ protected:
 
         while (!ptr->next->is_last() && key > ptr->next->element) {
             guard = guard_t{ptr->next->lock};
-            ptr  = &*ptr->next;
+            ptr   = &*ptr->next;
         }
 
         return {ptr, std::move(guard), guard_t{}};
@@ -70,7 +70,7 @@ protected:
 
     bool matches(const Node& prev, const T& key) const
     {
-        return !prev.next->is_last() && prev.next->element  == key;
+        return !prev.next->is_last() && prev.next->element == key;
     }
 
 public:
@@ -82,8 +82,11 @@ public:
 
     virtual bool member(const T& key) const override
     {
-        auto& prev = find_predecessor(key);
-        return matches(prev, key);
+        Node* prev;
+        guard_t g1, g2;
+        std::tie(prev, g1, g2) = find_predecessor_locking(key);
+
+        return matches(*prev, key);
     }
 
     virtual bool remove(const T& key) override
