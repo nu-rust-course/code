@@ -2,10 +2,8 @@
 
 #include "Set_base.h"
 
-#include <iostream>
 #include <memory>
 #include <mutex>
-#include <tuple>
 
 #undef Set
 #define Set Lazy_list_set
