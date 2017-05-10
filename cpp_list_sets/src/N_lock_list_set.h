@@ -15,7 +15,7 @@ class N_lock_list_set : public Set_base<T>
 {
 protected:
     struct Node;
-    using link_t  = std::unique_ptr<Node>;
+    using link_t  = std::shared_ptr<Node>;
     using guard_t = std::unique_lock<std::mutex>;
 
     struct Node : public Node_base<T> {
@@ -34,15 +34,15 @@ protected:
     // than `key`. That is, if `key` is in the list then it will be found in
     // the result's successor node, and if `key` is not in the list then it
     // belongs between the result and its successor.
-    virtual Node& find_predecessor(const T& key) const
+    virtual link_t find_predecessor(const T& key) const
     {
-        Node* ptr = &*link_;
+        link_t ptr = link_;
 
         while (!ptr->next->is_last() && key > ptr->next->element) {
-            ptr = &*ptr->next;
+            ptr = ptr->next;
         }
 
-        return *ptr;
+        return ptr;
     }
 
     // Note: This implementation is faulty. For a correct implementation,
@@ -54,21 +54,21 @@ protected:
     // This faulty implementation returns a triple of the reference to the
     // predecessor node, the guard for that node, and an empty guard.
     // Destruction of the guard will unlock the mutex.
-    virtual std::tuple<Node*, guard_t, guard_t>
+    virtual std::tuple<link_t, guard_t, guard_t>
     find_predecessor_locking(const T& key) const
     {
-        Node* ptr = &*link_;
+        link_t ptr = link_;
         guard_t guard{ptr->lock};
 
         while (!ptr->next->is_last() && key > ptr->next->element) {
             guard = guard_t{ptr->next->lock};
-            ptr   = &*ptr->next;
+            ptr   = ptr->next;
         }
 
         return {ptr, std::move(guard), guard_t{}};
     }
 
-    bool matches(const Node& prev, const T& key) const
+    static bool matches(const Node& prev, const T& key)
     {
         return !prev.next->is_last() && prev.next->element == key;
     }
@@ -76,13 +76,13 @@ protected:
 public:
     N_lock_list_set()
     {
-        link_       = std::make_unique<Node>(); // head sentinel
-        link_->next = std::make_unique<Node>(); // tail sentinel
+        link_       = std::make_shared<Node>(); // head sentinel
+        link_->next = std::make_shared<Node>(); // tail sentinel
     }
 
     virtual bool member(const T& key) const override
     {
-        Node* prev;
+        link_t prev;
         guard_t g1, g2;
         std::tie(prev, g1, g2) = find_predecessor_locking(key);
 
@@ -91,7 +91,7 @@ public:
 
     virtual bool remove(const T& key) override
     {
-        Node* prev;
+        link_t prev;
         guard_t g1, g2;
         std::tie(prev, g1, g2) = find_predecessor_locking(key);
 
@@ -103,16 +103,16 @@ public:
 
     virtual bool insert(T key) override
     {
-        Node* prev;
+        link_t prev;
         guard_t g1, g2;
         std::tie(prev, g1, g2) = find_predecessor_locking(key);
 
         if (matches(*prev, key)) return false;
 
-        std::unique_ptr<Node> new_node = std::make_unique<Node>();
+        link_t new_node = std::make_unique<Node>();
         new_node->element = std::move(key);
-        new_node->next    = std::move(prev->next);
-        prev->next        = std::move(new_node);
+        new_node->next    = prev->next;
+        prev->next        = new_node;
 
         return true;
     }

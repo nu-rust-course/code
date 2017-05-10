@@ -11,6 +11,7 @@ class HoH_list_set : public N_lock_list_set<T>
     using super = N_lock_list_set<T>;
     using typename super::Node;
     using typename super::guard_t;
+    using typename super::link_t;
     using super::link_;
 
     // Like `find_predecessor`, finds the predecessor node of the first node
@@ -20,17 +21,17 @@ class HoH_list_set : public N_lock_list_set<T>
     // Returns a triple of the reference to the predecessor node, the guard
     // for that node, and the guard for its successor. Destruction of the
     // guards will unlock the mutexes.
-    virtual std::tuple<Node*, guard_t, guard_t>
+    virtual std::tuple<link_t, guard_t, guard_t>
     find_predecessor_locking(const T& key) const override
     {
-        Node* ptr = &*link_;
+        link_t ptr = link_;
         guard_t curr{ptr->lock};
         guard_t next{ptr->next->lock};
 
         while (!ptr->next->is_last() && key > ptr->next->element) {
             curr = std::move(next);
             next = guard_t{ptr->next->next->lock};
-            ptr  = &*ptr->next;
+            ptr  = ptr->next;
         }
 
         return {ptr, std::move(curr), std::move(next)};

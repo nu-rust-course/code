@@ -1,4 +1,4 @@
-#include "Lock_free_list_set.h"
+#include "Lazy_list_set.h"
 
 #include <UnitTest++/UnitTest++.h>
 

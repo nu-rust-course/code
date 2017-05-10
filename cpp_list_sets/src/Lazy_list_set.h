@@ -15,8 +15,9 @@ class Lazy_list_set : public Set_base<T>
 {
 protected:
     struct Node;
-    using link_t  = std::unique_ptr<Node>;
-    using guard_t = std::lock_guard<std::mutex>;
+    using guard_t      = std::lock_guard<std::mutex>;
+    using link_t       = std::shared_ptr<Node>;
+    using const_link_t = std::shared_ptr<const Node>;
 
     struct Node : Node_base<T> {
         T          element;
@@ -35,23 +36,23 @@ protected:
     // than `key`. That is, if `key` is in the list then it will be found in
     // the result's successor node, and if `key` is not in the list then it
     // belongs between the result and its successor.
-    virtual Node& find_predecessor(const T& key) const
+    virtual link_t find_predecessor(const T& key) const
     {
-        Node* ptr = &*link_;
+        link_t ptr = link_;
 
         while (!ptr->next->is_last() && key > ptr->next->element) {
-            ptr = &*ptr->next;
+            ptr = ptr->next;
         }
 
-        return *ptr;
+        return ptr;
     }
 
-    bool validate(Node* prev, Node* curr) const
+    bool validate(const_link_t prev, const_link_t curr) const
     {
-        return &*prev->next == curr && !prev->marked  && !curr->marked;
+        return prev->next == curr && !prev->marked && !curr->marked;
     }
 
-    bool matches(const Node& prev, const T& key) const
+    static bool matches(const Node& prev, const T& key)
     {
         return !prev.next->is_last()
                && !prev.next->marked
@@ -61,28 +62,28 @@ protected:
 public:
     Lazy_list_set()
     {
-        link_ = std::make_unique<Node>();
-        link_->next = std::make_unique<Node>();
+        link_ = std::make_shared<Node>();
+        link_->next = std::make_shared<Node>();
     }
 
     virtual bool member(const T& key) const override
     {
-        auto& prev = find_predecessor(key);
-        return matches(prev, key);
+        link_t prev = find_predecessor(key);
+        return matches(*prev, key);
     }
 
     virtual bool remove(const T& key) override
     {
         for (;;) {
-            auto& prev = find_predecessor(key);
-            guard_t g1{prev.lock};
-            guard_t g2{prev.next->lock};
+            link_t prev = find_predecessor(key);
+            guard_t g1{prev->lock};
+            guard_t g2{prev->next->lock};
 
-            if (validate(&prev, &*prev.next)) {
-                if (! matches(prev, key)) return false;
+            if (validate(prev, prev->next)) {
+                if (! matches(*prev, key)) return false;
 
-                prev.next->marked = true;
-                prev.next = std::move(prev.next->next);
+                prev->next->marked = true;
+                prev->next = prev->next->next;
                 return true;
             }
         }
@@ -91,17 +92,17 @@ public:
     virtual bool insert(T key) override
     {
         for (;;) {
-            auto& prev = find_predecessor(key);
-            guard_t g1{prev.lock};
-            guard_t g2{prev.next->lock};
+            link_t prev = find_predecessor(key);
+            guard_t g1{prev->lock};
+            guard_t g2{prev->next->lock};
 
-            if (validate(&prev, &*prev.next)) {
-                if (matches(prev, key)) return false;
+            if (validate(prev, prev->next)) {
+                if (matches(*prev, key)) return false;
 
-                std::unique_ptr<Node> new_node = std::make_unique<Node>();
+                link_t new_node = std::make_shared<Node>();
                 new_node->element = std::move(key);
-                new_node->next    = std::move(prev.next);
-                prev.next         = std::move(new_node);
+                new_node->next    = prev->next;
+                prev->next        = new_node;
 
                 return true;
             }
