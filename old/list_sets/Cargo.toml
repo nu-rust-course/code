@@ -1,6 +1,0 @@
-[package]
-name = "list_sets"
-version = "0.1.0"
-authors = ["Jesse A. Tov <jesse.tov@gmail.com>"]
-
-[dependencies]
