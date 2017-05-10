@@ -5,6 +5,8 @@
 #include <atomic>
 #include <iostream>
 
+const std::memory_order order = std::memory_order_seq_cst;
+
 struct Data_race_example
 {
     std::atomic<int> x{0};
@@ -15,14 +17,14 @@ struct Data_race_example
 
     void left()
     {
-        x = 1;
-        l = y;
+        x.store(1, order);
+        l = y.load(order);
     }
 
     void right()
     {
-        y = 1;
-        r = x;
+        y.store(1, order);
+        r = x.load(order);
     }
 
     bool is_valid() const
