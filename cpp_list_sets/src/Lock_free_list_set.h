@@ -70,7 +70,8 @@ protected:
                     goto retry;
 
                 Node* next = curr->get_next();
-                delete curr;
+                // This leaks memory. See explanation below.
+                // delete curr;
                 curr = next;
             }
 
@@ -132,7 +133,9 @@ public:
             if (curr.link.compare_and_set_weak(&next, &next, false, true)) {
                 if (prev.link.compare_and_set_strong(
                         &curr, &next, false, false))
-                    delete &curr;
+                    // Want to delete here, but can't do it safely because
+                    // another thread might still be traversing this node.
+                    // delete &curr;
 
                 return true;
             }
