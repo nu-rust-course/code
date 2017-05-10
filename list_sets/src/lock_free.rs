@@ -3,11 +3,13 @@ use crossbeam::mem::epoch::{self, Atomic, Owned};
 use std::borrow::Borrow;
 use std::cmp::Ordering::*;
 use std::ptr;
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::{Acquire, Release, Relaxed};
 
 #[derive(Debug)]
 pub struct Set<T> {
     head: Atomic<Node<T>>,
+    len: AtomicUsize,
 }
 
 #[derive(Debug)]
@@ -19,14 +21,19 @@ struct Node<T> {
 impl<T> Set<T> {
     pub fn new() -> Self {
         Set {
-            head: Atomic::null()
+            head: Atomic::null(),
+            len: AtomicUsize::new(0),
         }
     }
 }
 
 impl<T: Ord> Set<T> {
     pub fn is_empty(&self) -> bool {
-        self.head.load(Acquire, &epoch::pin()).is_none()
+        self.head.load(Relaxed, &epoch::pin()).is_none()
+    }
+
+    pub fn len(&self) -> usize {
+        self.len.load(Relaxed)
     }
 
     pub fn contains<Q>(&self, element: &Q) -> bool
@@ -79,7 +86,11 @@ impl<T: Ord> Set<T> {
                     Greater => {
                         new_node.next.store_shared(Some(node), Relaxed);
                         match ptr.cas(Some(node), Some(new_node), Release) {
-                            Ok(_) => return true,
+                            Ok(_) => {
+                                self.len.fetch_add(1, Relaxed);
+                                return true;
+                            }
+
                             Err(owned) => {
                                 new_node = owned.unwrap();
                                 continue 'retry;
@@ -100,6 +111,7 @@ impl<T: Ord> Set<T> {
                     let next = head.next.load(Relaxed, &guard);
 
                     if self.head.cas_shared(Some(head), next, Release) {
+                        self.len.fetch_sub(1, Relaxed);
                         unsafe {
                             guard.unlinked(head);
                             return Some(ptr::read(&head.data));
@@ -129,6 +141,7 @@ impl<T: Ord> Set<T> {
                     Equal => {
                         let next = node.next.load(Relaxed, &guard);
                         if ptr.cas_shared(Some(node), next, Release) {
+                            self.len.fetch_sub(1, Relaxed);
                             unsafe {
                                 guard.unlinked(node);
                                 return Some(ptr::read(&node.data));
