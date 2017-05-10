@@ -1,14 +1,14 @@
-// C++ rendering of seq_cst.cpp
 // Searches for sequentially inconsistent behavior.
 
 #include "Run_example.h"
 
+#include <atomic>
 #include <iostream>
 
 struct Data_race_example
 {
-    int x{0};
-    int y{0};
+    std::atomic<int> x{0};
+    std::atomic<int> y{0};
 
     int l = -1;
     int r = -1;
@@ -40,5 +40,5 @@ struct Data_race_example
 
 int main()
 {
-    std::cout << Run_example<Data_race_example>() << '\n';
+    std::cout << Run_example<Data_race_example>(100'000) << '\n';
 }

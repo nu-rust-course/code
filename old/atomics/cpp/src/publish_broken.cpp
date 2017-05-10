@@ -1,8 +1,5 @@
-// Simple mutex depends on seq cst
-
 #include "Run_example.h"
 
-#include <atomic>
 #include <iostream>
 
 struct Publish_example
