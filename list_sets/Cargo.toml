@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Jesse A. Tov <jesse.tov@gmail.com>"]
 
 [dependencies]
+crossbeam = "0.2"
 
 [dev-dependencies]
 quickcheck = "0.4"
