@@ -5,6 +5,16 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::thread;
 
+// Here's what we're doing:
+//
+//   x = 0;
+//   y = 0;
+//
+//   x = 1; l = y || y = 1; r = x
+//
+// With SeqCst, it is not possible to get both l == 0 and r == 0,
+// but with Relaxed it is.
+
 struct SharedVars {
     x: AtomicUsize,
     y: AtomicUsize,
@@ -33,7 +43,6 @@ impl SharedVars {
 
 /// Runs one experiment, returning the values produced by left and right
 /// threads.
-#[inline]
 fn run(order: Ordering) -> (usize, usize) {
     let shared_l = Arc::new(SharedVars::new());
     let shared_r = shared_l.clone();
@@ -48,7 +57,6 @@ fn is_valid(l: usize, r: usize) -> bool {
     (l == 0 && r == 1) || (l == 1 && r == 0) || (l == 1 && r == 1)
 }
 
-#[inline]
 fn search(n: usize, order: Ordering) -> Option<(usize, usize)> {
     for _ in 0 .. n {
         let (l, r) = run(order);
