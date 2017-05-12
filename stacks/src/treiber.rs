@@ -6,13 +6,15 @@
 extern crate crossbeam;
 
 use std::ptr;
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::{Acquire, Release, Relaxed};
 
 use self::crossbeam::mem::epoch::{self, Atomic, Owned};
 
 /// A lock-free stack.
-pub struct TreiberStack<T> {
+pub struct Stack<T> {
     head: Atomic<Node<T>>,
+    len:  AtomicUsize,
 }
 
 struct Node<T> {
@@ -20,17 +22,23 @@ struct Node<T> {
     next: Atomic<Node<T>>,
 }
 
-impl<T> TreiberStack<T> {
+impl<T> Stack<T> {
     /// Returns a new, empty stack.
-    pub fn new() -> TreiberStack<T> {
-        TreiberStack {
-            head: Atomic::null()
+    pub fn new() -> Stack<T> {
+        Stack {
+            head: Atomic::null(),
+            len:  AtomicUsize::new(0),
         }
     }
 
     /// Checks whether the stack is empty.
     pub fn is_empty(&self) -> bool {
         self.head.load(Acquire, &epoch::pin()).is_none()
+    }
+
+    /// Returns a snapshop of the number of elements in the stack.
+    pub fn len(&self) -> usize {
+        self.len.load(Relaxed)
     }
 
     /// Pushes an element on top of the stack.
@@ -47,7 +55,10 @@ impl<T> TreiberStack<T> {
             new_node.next.store_shared(head, Relaxed);
 
             match self.head.cas(head, Some(new_node), Release) {
-                Ok(_) => return,
+                Ok(_) => {
+                    self.len.fetch_add(1, Relaxed);
+                    return;
+                }
                 Err(owned) => new_node = owned.unwrap(),
             }
         }
@@ -63,6 +74,7 @@ impl<T> TreiberStack<T> {
                 let next = head.next.load(Relaxed, &guard);
 
                 if self.head.cas_shared(Some(head), next, Release) {
+                    self.len.fetch_sub(1, Relaxed);
                     return Some(unsafe {
                         guard.unlinked(head);
                         ptr::read(&head.data)
@@ -72,5 +84,13 @@ impl<T> TreiberStack<T> {
                 return None;
             }
         }
+    }
+}
+
+impl<T: Clone> Stack<T> {
+    /// Gets a clone of the top element of the stack, if there is one.
+    pub fn peek(&self) -> Option<T> {
+        let guard = epoch::pin();
+        self.head.load(Acquire, &guard).map(|head| head.data.clone())
     }
 }
