@@ -54,6 +54,13 @@ impl<T> Stack<T> {
     }
 }
 
+impl<T: Clone> Stack<T> {
+    /// Gets a clone of the top element of the stack, if there is one.
+    pub fn try_peek(&self) -> Option<T> {
+        self.lock().try_peek().map(|data| data.clone())
+    }
+}
+
 impl<T: Clone> Clone for Stack<T> {
     fn clone(&self) -> Self {
         Stack::from_seq(self.lock().clone())

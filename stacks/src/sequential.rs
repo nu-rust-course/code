@@ -97,5 +97,23 @@ impl<T> Stack<T> {
             node.data
         })
     }
+
+    /// Allows viewing the top element of the stack, if there is one.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use stacks::sequential::Stack;
+    /// let mut stack = Stack::new();
+    ///
+    /// assert_eq!(None, stack.try_peek());
+    /// stack.push(3);
+    /// assert_eq!(Some(&3), stack.try_peek());
+    /// stack.push(4);
+    /// assert_eq!(Some(&4), stack.try_peek());
+    /// ```
+    pub fn try_peek(&self) -> Option<&T> {
+        self.head.as_ref().map(|node_ptr| &node_ptr.data)
+    }
 }
 
