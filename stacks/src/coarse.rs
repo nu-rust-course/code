@@ -49,15 +49,15 @@ impl<T> Stack<T> {
 
     /// Removes and returns the top element of the stack, or `None` if
     /// empty.
-    pub fn try_pop(&self) -> Option<T> {
-        self.lock().try_pop()
+    pub fn pop(&self) -> Option<T> {
+        self.lock().pop()
     }
 }
 
 impl<T: Clone> Stack<T> {
     /// Gets a clone of the top element of the stack, if there is one.
-    pub fn try_peek(&self) -> Option<T> {
-        self.lock().try_peek().map(|data| data.clone())
+    pub fn peek(&self) -> Option<T> {
+        self.lock().peek().map(|data| data.clone())
     }
 }
 
@@ -91,7 +91,7 @@ fn two_threads_cooperate() {
     handle2.join().unwrap();
 
     let mut actual = Vec::new();
-    while let Some(element) = stack.try_pop() {
+    while let Some(element) = stack.pop() {
         actual.push(element);
     }
     actual.sort();

@@ -14,10 +14,10 @@
 /// stack.push(3);
 /// stack.push(4);
 /// stack.push(5);
-/// assert_eq!(Some(5), stack.try_pop());
-/// assert_eq!(Some(4), stack.try_pop());
-/// assert_eq!(Some(3), stack.try_pop());
-/// assert_eq!(None, stack.try_pop());
+/// assert_eq!(Some(5), stack.pop());
+/// assert_eq!(Some(4), stack.pop());
+/// assert_eq!(Some(3), stack.pop());
+/// assert_eq!(None, stack.pop());
 /// ```
 #[derive(Clone, Debug)]
 pub struct Stack<T> {
@@ -89,7 +89,7 @@ impl<T> Stack<T> {
 
     /// Removes and returns the top element of the stack, or `None` if
     /// empty.
-    pub fn try_pop(&mut self) -> Option<T> {
+    pub fn pop(&mut self) -> Option<T> {
         self.head.take().map(|node_ptr| {
             let node = *node_ptr;
             self.len -= 1;
@@ -106,13 +106,13 @@ impl<T> Stack<T> {
     /// # use stacks::sequential::Stack;
     /// let mut stack = Stack::new();
     ///
-    /// assert_eq!(None, stack.try_peek());
+    /// assert_eq!(None, stack.peek());
     /// stack.push(3);
-    /// assert_eq!(Some(&3), stack.try_peek());
+    /// assert_eq!(Some(&3), stack.peek());
     /// stack.push(4);
-    /// assert_eq!(Some(&4), stack.try_peek());
+    /// assert_eq!(Some(&4), stack.peek());
     /// ```
-    pub fn try_peek(&self) -> Option<&T> {
+    pub fn peek(&self) -> Option<&T> {
         self.head.as_ref().map(|node_ptr| &node_ptr.data)
     }
 }
