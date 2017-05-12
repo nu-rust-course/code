@@ -12,6 +12,22 @@ use std::sync::atomic::Ordering::{Acquire, Release, Relaxed};
 use self::crossbeam::mem::epoch::{self, Atomic, Owned};
 
 /// A lock-free stack.
+///
+/// # Example
+///
+/// ```
+/// use stacks::treiber::Stack;
+///
+/// let stack = Stack::new();
+///
+/// stack.push(3);
+/// stack.push(4);
+/// stack.push(5);
+/// assert_eq!(Some(5), stack.pop());
+/// assert_eq!(Some(4), stack.pop());
+/// assert_eq!(Some(3), stack.pop());
+/// assert_eq!(None, stack.pop());
+/// ```
 pub struct Stack<T> {
     head: Atomic<Node<T>>,
     len:  AtomicUsize,
@@ -32,11 +48,37 @@ impl<T> Stack<T> {
     }
 
     /// Checks whether the stack is empty.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use stacks::treiber::Stack;
+    /// let stack = Stack::new();
+    ///
+    /// assert!(stack.is_empty());
+    /// stack.push(5);
+    /// assert!(! stack.is_empty());
+    /// ```
     pub fn is_empty(&self) -> bool {
         self.head.load(Acquire, &epoch::pin()).is_none()
     }
 
     /// Returns a snapshop of the number of elements in the stack.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use stacks::treiber::Stack;
+    /// let stack = Stack::new();
+    ///
+    /// assert_eq!(0, stack.len());
+    /// stack.push(1);
+    /// assert_eq!(1, stack.len());
+    /// stack.push(2);
+    /// assert_eq!(2, stack.len());
+    /// stack.push(3);
+    /// assert_eq!(3, stack.len());
+    /// ```
     pub fn len(&self) -> usize {
         self.len.load(Relaxed)
     }
@@ -89,8 +131,55 @@ impl<T> Stack<T> {
 
 impl<T: Clone> Stack<T> {
     /// Gets a clone of the top element of the stack, if there is one.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use stacks::treiber::Stack;
+    /// let stack = Stack::new();
+    ///
+    /// assert_eq!(None, stack.peek());
+    /// stack.push(3);
+    /// assert_eq!(Some(3), stack.peek());
+    /// stack.push(4);
+    /// assert_eq!(Some(4), stack.peek());
+    /// ```
     pub fn peek(&self) -> Option<T> {
         let guard = epoch::pin();
         self.head.load(Acquire, &guard).map(|head| head.data.clone())
     }
+}
+
+#[test]
+fn two_threads_cooperate() {
+    use std::{sync, thread};
+
+    let stack  = sync::Arc::new(Stack::new());
+    let stack1 = stack.clone();
+    let stack2 = stack.clone();
+
+    let handle1 = thread::spawn(move || {
+        for i in 0 .. 5 {
+            stack1.push(i);
+        }
+    });
+
+    let handle2 = thread::spawn(move || {
+        for i in 5 .. 10 {
+            stack2.push(i);
+        }
+    });
+
+    handle1.join().unwrap();
+    handle2.join().unwrap();
+
+    let mut actual = Vec::new();
+    while let Some(element) = stack.pop() {
+        actual.push(element);
+    }
+    actual.sort();
+
+    let expected: Vec<usize> = (0 .. 10).collect();
+
+    assert_eq!(expected, actual);
 }

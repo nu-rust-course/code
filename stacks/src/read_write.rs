@@ -79,15 +79,15 @@ fn two_threads_cooperate() {
     let stack1 = stack.clone();
     let stack2 = stack.clone();
 
-    let handle2 = thread::spawn(move || {
-        for i in 5 .. 10 {
-            stack2.push(i);
-        }
-    });
-
     let handle1 = thread::spawn(move || {
         for i in 0 .. 5 {
             stack1.push(i);
+        }
+    });
+
+    let handle2 = thread::spawn(move || {
+        for i in 5 .. 10 {
+            stack2.push(i);
         }
     });
 
