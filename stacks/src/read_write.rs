@@ -1,6 +1,6 @@
 //! Read-write–synchronized stacks.
 
-use super::sequential as seq;
+use super::sequential::Stack;
 
 use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
@@ -8,32 +8,32 @@ use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 ///
 /// This can be shared between threads by wrapping it in an `Arc`.
 #[derive(Debug)]
-pub struct Stack<T>(RwLock<seq::Stack<T>>);
+pub struct RwStack<T>(RwLock<Stack<T>>);
 
-impl<T> Stack<T> {
+impl<T> RwStack<T> {
     /// Returns a new, empty stack.
     pub fn new() -> Self {
-        Self::from_seq(seq::Stack::new())
+        Self::from_seq(Stack::new())
     }
 
     /// Converts a [sequential stack](../sequential/struct.Stack.html)
-    /// into a concurrent `Stack`.
-    pub fn from_seq(seq: seq::Stack<T>) -> Self {
-        Stack(RwLock::new(seq))
+    /// into a concurrent `RwStack`.
+    pub fn from_seq(seq: Stack<T>) -> Self {
+        RwStack(RwLock::new(seq))
     }
 
-    /// Converts a concurrent `Stack` into a [sequential
+    /// Converts a concurrent `RwStack` into a [sequential
     /// stack](../sequential/struct.Stack.html).
-    pub fn into_seq(self) -> seq::Stack<T> {
-        self.0.into_inner().expect("Stack lock poisoned")
+    pub fn into_seq(self) -> Stack<T> {
+        self.0.into_inner().expect("RwStack lock poisoned")
     }
 
-    fn lock_read(&self) -> RwLockReadGuard<seq::Stack<T>> {
-        self.0.read().expect("Stack lock poisoned")
+    fn lock_read(&self) -> RwLockReadGuard<Stack<T>> {
+        self.0.read().expect("RwStack lock poisoned")
     }
 
-    fn lock_write(&self) -> RwLockWriteGuard<seq::Stack<T>> {
-        self.0.write().expect("Stack lock poisoned")
+    fn lock_write(&self) -> RwLockWriteGuard<Stack<T>> {
+        self.0.write().expect("RwStack lock poisoned")
     }
 
     /// Checks whether the stack is empty.
@@ -58,16 +58,16 @@ impl<T> Stack<T> {
     }
 }
 
-impl<T: Clone> Stack<T> {
+impl<T: Clone> RwStack<T> {
     /// Gets a clone of the top element of the stack, if there is one.
     pub fn peek(&self) -> Option<T> {
         self.lock_read().peek().map(|data| data.clone())
     }
 }
 
-impl<T: Clone> Clone for Stack<T> {
+impl<T: Clone> Clone for RwStack<T> {
     fn clone(&self) -> Self {
-        Stack::from_seq(self.lock_read().clone())
+        RwStack::from_seq(self.lock_read().clone())
     }
 }
 
@@ -75,7 +75,7 @@ impl<T: Clone> Clone for Stack<T> {
 fn two_threads_cooperate() {
     use std::{sync, thread};
 
-    let stack  = sync::Arc::new(Stack::new());
+    let stack  = sync::Arc::new(RwStack::new());
     let stack1 = stack.clone();
     let stack2 = stack.clone();
 

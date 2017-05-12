@@ -1,6 +1,6 @@
 //! Coarsely-synchronized stacks.
 
-use super::sequential as seq;
+use super::sequential::Stack;
 
 use std::sync::{Mutex, MutexGuard};
 
@@ -8,28 +8,28 @@ use std::sync::{Mutex, MutexGuard};
 ///
 /// This can be shared between threads by wrapping it in an `Arc`.
 #[derive(Debug)]
-pub struct Stack<T>(Mutex<seq::Stack<T>>);
+pub struct CoarseStack<T>(Mutex<Stack<T>>);
 
-impl<T> Stack<T> {
+impl<T> CoarseStack<T> {
     /// Returns a new, empty stack.
     pub fn new() -> Self {
-        Self::from_seq(seq::Stack::new())
+        Self::from_seq(Stack::new())
     }
 
     /// Converts a [sequential stack](../sequential/struct.Stack.html)
-    /// into a concurrent `Stack`.
-    pub fn from_seq(seq: seq::Stack<T>) -> Self {
-        Stack(Mutex::new(seq))
+    /// into a concurrent `CoarseStack`.
+    pub fn from_seq(seq: Stack<T>) -> Self {
+        CoarseStack(Mutex::new(seq))
     }
 
-    /// Converts a concurrent `Stack` into a [sequential
+    /// Converts a concurrent `CoarseStack` into a [sequential
     /// stack](../sequential/struct.Stack.html).
-    pub fn into_seq(self) -> seq::Stack<T> {
-        self.0.into_inner().expect("Stack mutex poisoned")
+    pub fn into_seq(self) -> Stack<T> {
+        self.0.into_inner().expect("CoarseStack mutex poisoned")
     }
 
-    fn lock(&self) -> MutexGuard<seq::Stack<T>> {
-        self.0.lock().expect("Stack mutex poisoned")
+    fn lock(&self) -> MutexGuard<Stack<T>> {
+        self.0.lock().expect("CoarseStack mutex poisoned")
     }
 
     /// Checks whether the stack is empty.
@@ -54,16 +54,16 @@ impl<T> Stack<T> {
     }
 }
 
-impl<T: Clone> Stack<T> {
+impl<T: Clone> CoarseStack<T> {
     /// Gets a clone of the top element of the stack, if there is one.
     pub fn peek(&self) -> Option<T> {
         self.lock().peek().map(|data| data.clone())
     }
 }
 
-impl<T: Clone> Clone for Stack<T> {
+impl<T: Clone> Clone for CoarseStack<T> {
     fn clone(&self) -> Self {
-        Stack::from_seq(self.lock().clone())
+        CoarseStack::from_seq(self.lock().clone())
     }
 }
 
@@ -71,7 +71,7 @@ impl<T: Clone> Clone for Stack<T> {
 fn two_threads_cooperate() {
     use std::{sync, thread};
 
-    let stack  = sync::Arc::new(Stack::new());
+    let stack  = sync::Arc::new(CoarseStack::new());
     let stack1 = stack.clone();
     let stack2 = stack.clone();
 

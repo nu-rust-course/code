@@ -16,9 +16,9 @@ use self::crossbeam::mem::epoch::{self, Atomic, Owned};
 /// # Example
 ///
 /// ```
-/// use stacks::treiber::Stack;
+/// use stacks::treiber::TreiberStack;
 ///
-/// let stack = Stack::new();
+/// let stack = TreiberStack::new();
 ///
 /// stack.push(3);
 /// stack.push(4);
@@ -28,7 +28,7 @@ use self::crossbeam::mem::epoch::{self, Atomic, Owned};
 /// assert_eq!(Some(3), stack.pop());
 /// assert_eq!(None, stack.pop());
 /// ```
-pub struct Stack<T> {
+pub struct TreiberStack<T> {
     head: Atomic<Node<T>>,
     len:  AtomicUsize,
 }
@@ -38,10 +38,10 @@ struct Node<T> {
     next: Atomic<Node<T>>,
 }
 
-impl<T> Stack<T> {
+impl<T> TreiberStack<T> {
     /// Returns a new, empty stack.
-    pub fn new() -> Stack<T> {
-        Stack {
+    pub fn new() -> TreiberStack<T> {
+        TreiberStack {
             head: Atomic::null(),
             len:  AtomicUsize::new(0),
         }
@@ -52,8 +52,8 @@ impl<T> Stack<T> {
     /// # Example
     ///
     /// ```
-    /// # use stacks::treiber::Stack;
-    /// let stack = Stack::new();
+    /// # use stacks::treiber::TreiberStack;
+    /// let stack = TreiberStack::new();
     ///
     /// assert!(stack.is_empty());
     /// stack.push(5);
@@ -68,8 +68,8 @@ impl<T> Stack<T> {
     /// # Example
     ///
     /// ```
-    /// # use stacks::treiber::Stack;
-    /// let stack = Stack::new();
+    /// # use stacks::treiber::TreiberStack;
+    /// let stack = TreiberStack::new();
     ///
     /// assert_eq!(0, stack.len());
     /// stack.push(1);
@@ -129,14 +129,14 @@ impl<T> Stack<T> {
     }
 }
 
-impl<T: Clone> Stack<T> {
+impl<T: Clone> TreiberStack<T> {
     /// Gets a clone of the top element of the stack, if there is one.
     ///
     /// # Example
     ///
     /// ```
-    /// # use stacks::treiber::Stack;
-    /// let stack = Stack::new();
+    /// # use stacks::treiber::TreiberStack;
+    /// let stack = TreiberStack::new();
     ///
     /// assert_eq!(None, stack.peek());
     /// stack.push(3);
@@ -154,7 +154,7 @@ impl<T: Clone> Stack<T> {
 fn two_threads_cooperate() {
     use std::{sync, thread};
 
-    let stack  = sync::Arc::new(Stack::new());
+    let stack  = sync::Arc::new(TreiberStack::new());
     let stack1 = stack.clone();
     let stack2 = stack.clone();
 
