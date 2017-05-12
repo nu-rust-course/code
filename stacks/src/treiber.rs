@@ -150,6 +150,12 @@ impl<T: Clone> TreiberStack<T> {
     }
 }
 
+impl<T> Drop for TreiberStack<T> {
+    fn drop(&mut self) {
+        while let Some(_) = self.pop() {}
+    }
+}
+
 #[test]
 fn two_threads_cooperate() {
     use std::{sync, thread};
