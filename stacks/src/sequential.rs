@@ -19,13 +19,13 @@
 /// assert_eq!(Some(3), stack.pop());
 /// assert_eq!(None, stack.pop());
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Stack<T> {
     head: Option<Box<Node<T>>>,
     len:  usize,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 struct Node<T> {
     data: T,
     next: Option<Box<Node<T>>>,
@@ -117,3 +117,57 @@ impl<T> Stack<T> {
     }
 }
 
+impl<T: Clone> Clone for Stack<T> {
+    /// Clones a stack by cloning its contents.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use stacks::sequential::Stack;
+    /// let mut stack = Stack::new();
+    ///
+    /// stack.push(3);
+    /// stack.push(4);
+    /// stack.push(5);
+    ///
+    /// let mut stack2 = stack.clone();
+    ///
+    /// assert_eq!(Some(5), stack.pop());
+    /// assert_eq!(Some(4), stack.pop());
+    /// assert_eq!(Some(3), stack.pop());
+    /// assert_eq!(None, stack.pop());
+    ///
+    /// assert_eq!(Some(5), stack2.pop());
+    /// assert_eq!(Some(4), stack2.pop());
+    /// assert_eq!(Some(3), stack2.pop());
+    /// assert_eq!(None, stack2.pop());
+    /// ```
+    fn clone(&self) -> Self {
+        let mut result = Stack {
+            head: None,
+            len:  self.len,
+        };
+
+        {
+            let mut src = &self.head;
+            let mut dst = Some(&mut result.head);
+
+            while let &Some(ref src_node) = src {
+                let dst_ref = dst.take().unwrap();
+
+                *dst_ref = Some(Box::new(Node {
+                    data: src_node.data.clone(),
+                    next: None,
+                }));
+
+                if let Some(ref mut dst_node) = *dst_ref {
+                    dst = Some(&mut dst_node.next);
+                }
+
+                src = &src_node.next;
+            }
+        }
+
+        result
+    }
+}
