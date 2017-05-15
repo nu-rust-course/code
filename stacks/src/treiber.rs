@@ -7,7 +7,7 @@ extern crate crossbeam;
 
 use std::ptr;
 use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering::{Acquire, Release, Relaxed};
+use std::sync::atomic::Ordering::{Acquire, Release, AcqRel, Relaxed};
 
 use self::crossbeam::mem::epoch::{self, Atomic, Owned};
 
@@ -80,7 +80,7 @@ impl<T> TreiberStack<T> {
     /// assert_eq!(3, stack.len());
     /// ```
     pub fn len(&self) -> usize {
-        self.len.load(Relaxed)
+        self.len.load(Acquire)
     }
 
     /// Pushes an element on top of the stack.
@@ -98,7 +98,7 @@ impl<T> TreiberStack<T> {
 
             match self.head.cas(head, Some(new_node), Release) {
                 Ok(_) => {
-                    self.len.fetch_add(1, Relaxed);
+                    self.len.fetch_add(1, AcqRel);
                     return;
                 }
                 Err(owned) => new_node = owned.unwrap(),
@@ -116,7 +116,7 @@ impl<T> TreiberStack<T> {
                 let next = head.next.load(Relaxed, &guard);
 
                 if self.head.cas_shared(Some(head), next, Release) {
-                    self.len.fetch_sub(1, Relaxed);
+                    self.len.fetch_sub(1, AcqRel);
                     return Some(unsafe {
                         guard.unlinked(head);
                         ptr::read(&head.data)
