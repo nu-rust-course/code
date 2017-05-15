@@ -61,7 +61,7 @@ impl<T> RwStack<T> {
 impl<T: Clone> RwStack<T> {
     /// Gets a clone of the top element of the stack, if there is one.
     pub fn peek(&self) -> Option<T> {
-        self.lock_read().peek().map(|data| data.clone())
+        self.lock_read().peek().cloned()
     }
 }
 

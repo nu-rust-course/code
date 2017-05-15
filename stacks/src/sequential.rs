@@ -160,10 +160,9 @@ impl<T: Clone> Clone for Stack<T> {
                     next: None,
                 }));
 
-                if let Some(ref mut dst_node) = *dst_ref {
-                    dst = Some(&mut dst_node.next);
-                }
+                let dst_node = dst_ref.as_mut().unwrap();
 
+                dst = Some(&mut dst_node.next);
                 src = &src_node.next;
             }
         }

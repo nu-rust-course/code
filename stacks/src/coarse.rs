@@ -57,7 +57,7 @@ impl<T> CoarseStack<T> {
 impl<T: Clone> CoarseStack<T> {
     /// Gets a clone of the top element of the stack, if there is one.
     pub fn peek(&self) -> Option<T> {
-        self.lock().peek().map(|data| data.clone())
+        self.lock().peek().cloned()
     }
 }
 
