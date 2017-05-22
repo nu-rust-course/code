@@ -63,13 +63,18 @@ fn serve<S>(s: S) -> io::Result<()>
     let listener = TcpListener::bind(&address, &handle)?;
 
     let connections = listener.incoming();
-    let server = connections.for_each(move |(socket, _peer_addr)| {
+    let server = connections.for_each(move |(socket, peer_addr)| {
+        println!("New client on {}", peer_addr);
+        
         let (writer, reader) = socket.framed(LineCodec).split();
         let service = s.new_service()?;
 
         let responses = reader.and_then(move |req| service.call(req));
         let server = writer.send_all(responses)
-            .then(|_| Ok(()));
+            .then(move |_| {
+                println!("Client on {} hung up", peer_addr);
+                Ok(())
+            });
         handle.spawn(server);
 
         Ok(())
