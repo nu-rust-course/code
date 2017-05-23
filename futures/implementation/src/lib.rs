@@ -16,8 +16,8 @@ pub trait Future {
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error>;
 
-    fn map<F, J>(self, f: F) -> Map<Self, F>
-        where F: FnOnce(Self::Item) -> J,
+    fn map<F, I>(self, f: F) -> Map<Self, F>
+        where F: FnOnce(Self::Item) -> I,
               Self: Sized
     {
         Map::new(self, f)
@@ -70,11 +70,11 @@ impl<A: Future, F> Map<A, F> {
     }
 }
 
-impl<A, F, J> Future for Map<A, F> where
+impl<A, F, I> Future for Map<A, F> where
     A: Future,
-    F: FnOnce(A::Item) -> J
+    F: FnOnce(A::Item) -> I
 {
-    type Item = J;
+    type Item = I;
     type Error = A::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
@@ -105,7 +105,7 @@ impl<A: Future, B: Future, F> AndThen<A, B, F> {
 
 impl<A, B, F> Future for AndThen<A, B, F>
     where A: Future,
-          B: Future<Error=A::Error>,
+          B: Future<Error = A::Error>,
           F: FnOnce(A::Item) -> B
 {
     type Item = B::Item;
