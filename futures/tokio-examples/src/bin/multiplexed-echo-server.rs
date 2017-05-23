@@ -70,6 +70,7 @@ impl Encoder for LineCodec {
     type Error = io::Error;
 
     fn encode(&mut self, msg: Self::Item, buf: &mut BytesMut) -> io::Result<()> {
+        // buf.extend(format!("SEQ({}): ", msg.0).as_bytes());
         buf.extend(msg.1.as_bytes());
         buf.extend(b"\n");
         Ok(())
