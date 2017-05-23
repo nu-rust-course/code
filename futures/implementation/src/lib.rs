@@ -50,6 +50,12 @@ pub trait Future {
     {
         Box::new(self)
     }
+
+    fn fuse(self) -> Fuse<Self>
+        where Self: Sized
+    {
+        Fuse::new(self)
+    }
 }
 
 type BoxFuture<I, E> = Box<Future<Item = I, Error = E> + Send>;
@@ -255,5 +261,34 @@ impl<A, B> Future for SelectNext<A, B>
             SelectNext::A(ref mut a) => a.poll(),
             SelectNext::B(ref mut b) => b.poll(),
         }
+    }
+}
+
+#[derive(Debug)]
+#[must_use = "futures do nothing unless polled"]
+pub struct Fuse<A>(Option<A>);
+
+impl<A: Future> Fuse<A> {
+    pub fn new(future: A) -> Self {
+        Fuse(Some(future))
+    }
+}
+
+impl<A: Future> Future for Fuse<A> {
+    type Item = A::Item;
+    type Error = A::Error;
+
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        let result = match self.0 {
+            None => return Ok(NotReady),
+            Some(ref mut a) => match a.poll() {
+                Err(e) => Err(e),
+                Ok(NotReady) => return Ok(NotReady),
+                Ok(Ready(va)) => Ok(Ready(va)),
+            }
+        };
+
+        self.0 = None;
+        result
     }
 }
