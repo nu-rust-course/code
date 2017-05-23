@@ -30,7 +30,29 @@ pub trait Future {
     {
         AndThen::new(self, f)
     }
+
+    fn join<B>(self, other: B) -> Join<Self, B>
+        where B: Future<Error = Self::Error>,
+              Self: Sized
+    {
+        Join::new(self, other)
+    }
+
+    fn select<B>(self, other: B) -> Select<Self, B>
+        where B: Future<Item = Self::Item, Error = Self::Error>,
+              Self: Sized
+    {
+        Select::new(self, other)
+    }
+
+    fn boxed(self) -> BoxFuture<Self::Item, Self::Error>
+        where Self: Sized + Send + 'static
+    {
+        Box::new(self)
+    }
 }
+
+type BoxFuture<I, E> = Box<Future<Item = I, Error = E> + Send>;
 
 #[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
@@ -112,6 +134,126 @@ impl<A, B, F> Future for AndThen<A, B, F>
                 result
             }
             _ => unreachable!(),
+        }
+    }
+}
+
+#[derive(Debug)]
+#[must_use = "futures do nothing unless polled"]
+pub enum Join<A: Future, B: Future> {
+    Running(A, B),
+    AReady(A::Item, B),
+    BReady(A, B::Item),
+    Done,
+}
+
+impl<A: Future, B: Future> Join<A, B> {
+    pub fn new(a: A, b: B) -> Self {
+        Join::Running(a, b)
+    }
+}
+
+impl<A: Future, B: Future<Error = A::Error>> Future for Join<A, B> {
+    type Item = (A::Item, B::Item);
+    type Error = A::Error;
+
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        use Join::*;
+
+        match mem::replace(self, Done) {
+            Running(mut a, mut b) => match (a.poll(), b.poll()) {
+                (Err(e), _) => Err(e),
+                (_, Err(e)) => Err(e),
+                (Ok(Ready(va)), Ok(Ready(vb))) => Ok(Ready((va, vb))),
+                (Ok(NotReady), Ok(Ready(vb))) => {
+                    *self = BReady(a, vb);
+                    Ok(NotReady)
+                }
+                (Ok(Ready(va)), Ok(NotReady)) => {
+                    *self = AReady(va, b);
+                    Ok(NotReady)
+                }
+                (Ok(NotReady), Ok(NotReady)) => Ok(NotReady),
+            },
+
+            AReady(va, mut b) => match b.poll() {
+                Err(e) => Err(e),
+                Ok(Ready(vb)) => Ok(Ready((va, vb))),
+                Ok(NotReady) => {
+                   *self = AReady(va, b);
+                    Ok(NotReady)
+                }
+            },
+
+            BReady(mut a, vb) => match a.poll() {
+                Err(e) => Err(e),
+                Ok(Ready(va)) => Ok(Ready((va, vb))),
+                Ok(NotReady) => {
+                    *self = BReady(a, vb);
+                    Ok(NotReady)
+                }
+            },
+
+            Done => panic!("cannot poll Join twice"),
+        }
+    }
+}
+
+#[derive(Debug)]
+#[must_use = "futures do nothing unless polled"]
+pub struct Select<A: Future, B: Future>(Option<(A, B)>);
+
+#[derive(Debug)]
+#[must_use = "futures do nothing unless polled"]
+pub enum SelectNext<A: Future, B: Future> {
+    A(A),
+    B(B),
+}
+
+impl<A: Future, B: Future> Select<A, B> {
+    pub fn new(left: A, right: B) -> Self {
+        Select(Some((left, right)))
+    }
+}
+
+impl<A, B> Future for Select<A, B>
+    where A: Future,
+          B: Future<Item = A::Item, Error = A::Error>
+{
+    type Item = (A::Item, SelectNext<A, B>);
+    type Error = (A::Error, SelectNext<A, B>);
+
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        match self.0.take() {
+            Some((mut a, mut b)) => match a.poll() {
+                Err(e) => Err((e, SelectNext::B(b))),
+                Ok(Ready(va)) => Ok(Ready((va, SelectNext::B(b)))),
+                Ok(NotReady) => match b.poll() {
+                    Err(e) => Err((e, SelectNext::A(a))),
+                    Ok(Ready(vb)) => Ok(Ready((vb, SelectNext::A(a)))),
+                    Ok(NotReady) => {
+                        self.0 = Some((a, b));
+                        Ok(NotReady)
+                    }
+                },
+            },
+
+            None => panic!("cannot poll Select twice"),
+        }
+    }
+}
+
+impl<A, B> Future for SelectNext<A, B>
+    where A: Future,
+          B: Future<Item = A::Item, Error = A::Error>
+{
+    type Item = A::Item;
+    type Error = A::Error;
+
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        match *self {
+            SelectNext::A(ref mut a) => a.poll(),
+            SelectNext::B(ref mut b) => b.poll(),
         }
     }
 }
