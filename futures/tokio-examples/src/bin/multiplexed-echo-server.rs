@@ -16,12 +16,12 @@ use futures::{future, Future, BoxFuture};
 use tokio_io::codec::{Encoder, Decoder};
 use tokio_io::{AsyncRead, AsyncWrite};
 use tokio_io::codec::Framed;
-use tokio_proto::multiplex::ServerProto;
+use tokio_proto::multiplex::{ServerProto, RequestId};
 use tokio_proto::TcpServer;
 use tokio_service::Service;
 use tokio_timer::Timer;
 
-pub struct LineCodec(u64);
+pub struct LineCodec(RequestId);
 
 fn decode_u64(buf: &[u8]) -> Result<u64, io::Error> {
     str::from_utf8(buf)
@@ -35,7 +35,7 @@ fn make_error(msg: &'static str) -> io::Error {
 }
 
 impl Decoder for LineCodec {
-    type Item = (u64, (u64, String));
+    type Item = (RequestId, (u64, String));
     type Error = io::Error;
 
     fn decode(&mut self, buf: &mut BytesMut) -> io::Result<Option<Self::Item>> {
@@ -66,7 +66,7 @@ impl Decoder for LineCodec {
 }
 
 impl Encoder for LineCodec {
-    type Item = (u64, String);
+    type Item = (RequestId, String);
     type Error = io::Error;
 
     fn encode(&mut self, msg: Self::Item, buf: &mut BytesMut) -> io::Result<()> {
