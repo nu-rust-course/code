@@ -10,6 +10,9 @@ pub struct Rational {
     num: isize,
     den: isize,
 }
+// Invariants:
+//  - den > 0
+//  - gcd(num, den) == 1
 
 fn gcd(mut a: isize, mut b: isize) -> isize
 {
@@ -163,5 +166,48 @@ impl PartialOrd for Rational {
 impl Ord for Rational {
     fn cmp(&self, other: &Rational) -> Ordering {
         (self.num() * other.den()).cmp(&(self.den() * other.num()))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn least_terms() {
+        assert_eq!( Rational::new(2, 3), Rational::new(4, 6) );
+        assert_eq!( Rational::new(2, 3), Rational::new(-4, -6) );
+        assert_eq!( Rational::new(-2, 3), Rational::new(2, -3) );
+    }
+
+    #[test]
+    #[should_panic]
+    fn denominator_zero() {
+        Rational::new(5, 0);
+    }
+
+    #[test]
+    fn display() {
+        assert_eq!( "5", format!("{}", Rational::new(5, 1)) );
+        assert_eq!( "5/2", format!("{}", Rational::new(5, 2)) );
+    }
+
+    #[test]
+    fn negation() {
+        assert_eq!( Rational::new(-5, 6), -Rational::new(5, 6) );
+        assert_eq!( Rational::new(5, 6), -Rational::new(-5, 6) );
+        assert_eq!( Rational::new(5, 6), -&Rational::new(-5, 6) );
+    }
+
+    #[test]
+    fn multiplication() {
+        assert_eq!( Rational::new(1, 2),
+                    Rational::new(2, 3) * Rational::new(3, 4) );
+        assert_eq!( Rational::new(1, 2),
+                    &Rational::new(2, 3) * Rational::new(3, 4) );
+        assert_eq!( Rational::new(1, 2),
+                    Rational::new(2, 3) * &Rational::new(3, 4) );
+        assert_eq!( Rational::new(1, 2),
+                    &Rational::new(2, 3) * &Rational::new(3, 4) );
     }
 }
