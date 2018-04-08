@@ -2,7 +2,7 @@
 //! are pairs representing 2-D vectors.
 
 use std::default::Default;
-use std::fmt::{Display, Formatter, Error};
+use std::fmt;
 use std::ops::{Add, Mul, Neg, Sub};
 
 /// A 2-vector of `f64`s.
@@ -75,8 +75,8 @@ fn test_default() {
     assert_eq!(V2::new(0, 0), v);
 }
 
-impl<T: Display> Display for V2<T> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+impl<T: fmt::Display> fmt::Display for V2<T> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "⟨{}, {}⟩", self.x, self.y)
     }
 }
