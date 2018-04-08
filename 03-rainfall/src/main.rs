@@ -80,7 +80,7 @@ fn read_measurements<R: Read>(reader: R) -> Vec<f64> {
         }
     }
 
-    return measurements;
+    measurements
 }
 
 #[cfg(test)]
