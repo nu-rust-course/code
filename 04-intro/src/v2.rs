@@ -23,7 +23,7 @@ impl V2 {
     /// assert_eq!(3., v.y);
     /// ```
     pub fn new(x: f64, y: f64) -> Self {
-        V2 { x: x, y: y, }
+        V2 { x, y }
     }
 
     /// Returns the origin.

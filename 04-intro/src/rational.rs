@@ -97,6 +97,7 @@ impl<'a> Neg for &'a Rational {
 impl Mul<Rational> for Rational {
     type Output = Rational;
 
+    #[cfg_attr(feature = "cargo-clippy", allow(suspicious_arithmetic_impl))]
     fn mul(self, other: Rational) -> Rational {
         let ab_divisor = gcd(self.num(), other.den());
         let ba_divisor = gcd(other.num(), self.den());

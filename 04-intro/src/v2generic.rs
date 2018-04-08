@@ -24,7 +24,7 @@ impl<T> V2<T> {
     /// assert_eq!(3., v.y);
     /// ```
     pub fn new(x: T, y: T) -> Self {
-        V2 { x: x, y: y, }
+        V2 { x, y, }
     }
 }
 
