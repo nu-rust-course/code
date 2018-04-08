@@ -7,8 +7,8 @@ use std::ops::{Mul, Neg};
 /// A rational number.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Rational {
-    num_: isize,
-    den_: isize,
+    num: isize,
+    den: isize,
 }
 
 fn gcd(mut a: isize, mut b: isize) -> isize
@@ -53,14 +53,14 @@ impl Rational {
             d = -d;
         }
 
-        Rational { num_: n, den_: d }
+        Rational { num: n, den: d }
     }
 
     /// Returns the numerator of the rational number in least terms.
-    pub fn num(&self) -> isize { self.num_ }
+    pub fn num(&self) -> isize { self.num }
 
     /// Returns the denominator of the rational number in least terms.
-    pub fn den(&self) -> isize { self.den_ }
+    pub fn den(&self) -> isize { self.den }
 
     /// Approximates the rational as an `f64`.
     pub fn as_f64(&self) -> f64 {
@@ -82,7 +82,7 @@ impl Neg for Rational {
     type Output = Rational;
 
     fn neg(self) -> Rational {
-        Rational { num_: -self.num(), den_: self.den() }
+        Rational { num: -self.num(), den: self.den() }
     }
 }
 
@@ -110,7 +110,7 @@ impl Mul<Rational> for Rational {
         let num = a_num * b_num;
         let den = a_den * b_den;
 
-        Rational { num_: num, den_: den }
+        Rational { num, den }
     }
 }
 
