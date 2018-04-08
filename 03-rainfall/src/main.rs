@@ -53,7 +53,7 @@
  *    to print, so we will print an explanatory message instead.
  */
 
-use std::io::{BufRead,BufReader,Read,stdin,Write,stdout};
+use std::io::{BufRead, BufReader, Read, stdin, Write, stdout};
 
 fn main() {
     let measurements = read_measurements(stdin());
@@ -66,6 +66,7 @@ struct Results {
     below: usize,
 }
 
+// Reads the measurements from an input stream, cleaning and returning them.
 fn read_measurements<R: Read>(reader: R) -> Vec<f64> {
     let mut measurements: Vec<f64> = vec![]; // Vec::new()
     let mut lines = BufReader::new(reader).lines();
@@ -108,6 +109,7 @@ mod read_measurements_tests {
         assert_read(&[3., 4.], "3\n4\n999\n5\n");
     }
 
+    // Asserts that reading from `input` yields `expected`.
     fn assert_read(expected: &[f64], input: &str) {
         let mock_read = Cursor::new(input);
         let measurements = read_measurements(mock_read);
@@ -115,10 +117,11 @@ mod read_measurements_tests {
     }
 }
 
+// Calculates the results for the given dataset.
 fn calculate_results(fs: &[f64]) -> Results {
     let m = mean(fs);
-    let b = fs.iter().filter(|&&x| m - 5.0 <= x && x < m).count();
-    let a = fs.iter().filter(|&&x| m < x && x <= m + 5.0).count();
+    let b = fs.iter().filter(|x| m - 5.0 <= **x && **x < m).count();
+    let a = fs.iter().filter(|x| m < **x && **x <= m + 5.0).count();
 
     Results {
         mean:  m,
@@ -141,8 +144,9 @@ mod calculate_results_tests {
     }
 }
 
+// Computes the mean of a slice of samples.
 fn mean(samples: &[f64]) -> f64 {
-    sum(samples) / (samples.len() as f64)
+    sum(samples) / samples.len() as f64
 }
 
 #[cfg(test)]
@@ -160,6 +164,7 @@ mod mean_tests {
     }
 }
 
+// Computes the sum of a slice of samples.
 fn sum(samples: &[f64]) -> f64 {
     samples.iter().fold(0.0, |a,b| a + *b)
 }
@@ -179,6 +184,7 @@ mod sum_tests {
     }
 }
 
+// Writes the results to the given output stream.
 fn write_output<W: Write>(mut writer: W, r: &Results) {
   if r.mean.is_nan() {
       write!(writer, "No measurements provided.\n").unwrap();
@@ -208,6 +214,7 @@ mod write_output_tests {
             &Results { mean:  5., above: 2, below: 3 });
     }
 
+    // Asserts that `results` when written produces `expected`.
     fn assert_write(expected: &str, results: &Results) {
         let mut writer = Cursor::new(vec![]);
         write_output(&mut writer, results);
