@@ -26,6 +26,7 @@ fn gcd(mut a: isize, mut b: isize) -> isize
 fn gcd_generic<N>(mut a: N, mut b: N) -> N
     where N: Copy + Eq + Rem<Output = N> + Sub<Output = N>
 {
+    #[cfg_attr(feature = "cargo-clippy", allow(eq_op))]
     let zero = a - a;
 
     while a != zero {
