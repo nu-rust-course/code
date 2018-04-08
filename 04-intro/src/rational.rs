@@ -2,7 +2,7 @@
 
 use std::cmp::Ordering;
 use std::fmt;
-use std::ops::{Mul, Neg};
+use std::ops::{Mul, Neg, Rem, Sub};
 
 /// A rational number.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -14,6 +14,21 @@ pub struct Rational {
 fn gcd(mut a: isize, mut b: isize) -> isize
 {
     while a != 0 {
+        let c = a;
+        a = b % a;
+        b = c;
+    }
+
+    b
+}
+
+#[allow(dead_code)]
+fn gcd_generic<N>(mut a: N, mut b: N) -> N
+    where N: Copy + Eq + Rem<Output = N> + Sub<Output = N>
+{
+    let zero = a - a;
+
+    while a != zero {
         let c = a;
         a = b % a;
         b = c;
