@@ -111,7 +111,7 @@ mod read_measurements_tests {
     fn assert_read(expected: &[f64], input: &str) {
         let mock_read = Cursor::new(input);
         let measurements = read_measurements(mock_read);
-        assert_eq!(expected.to_owned(), measurements);
+        assert_eq!(expected, measurements.as_slice());
     }
 }
 
