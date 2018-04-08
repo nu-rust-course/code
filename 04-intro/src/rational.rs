@@ -47,7 +47,7 @@ impl Rational {
     ///
     /// # Panics
     ///
-    /// Panics if the denominator is 0.
+    /// Panics if `den` is 0.
     ///
     /// # Example
     ///
@@ -57,22 +57,20 @@ impl Rational {
     /// assert_eq!(3, r.num());
     /// assert_eq!(4, r.den());
     /// ```
-    pub fn new(mut n: isize, mut d: isize) -> Self {
-        if d == 0 {
-            panic!("Rational::new got 0 denominator");
+    pub fn new(mut num: isize, mut den: isize) -> Self {
+        assert_ne!( den, 0, "Rational::new got 0 denominator" );
+
+        let divisor = gcd(num, den);
+
+        num /= divisor;
+        den /= divisor;
+
+        if den < 0 {
+            num = -num;
+            den = -den;
         }
 
-        let divisor = gcd(n, d);
-
-        n /= divisor;
-        d /= divisor;
-
-        if d < 0 {
-            n = -n;
-            d = -d;
-        }
-
-        Rational { num: n, den: d }
+        Rational { num, den }
     }
 
     /// Returns the numerator of the rational number in least terms.
