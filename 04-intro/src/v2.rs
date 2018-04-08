@@ -1,7 +1,7 @@
 //! 2-vectors of `f64`s. Not to be confused with `std::vec::Vec`, these
 //! are pairs representing 2-D vectors.
 
-use std::fmt::{Display, Formatter, Error};
+use std::fmt;
 use std::ops::{Add, Mul, Neg, Sub};
 
 /// A 2-vector of `f64`s.
@@ -85,8 +85,10 @@ impl V2 {
     }
 }
 
-impl Display for V2 {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+// Display is the trait that controls how values are formatted using the
+// default format code "{}".
+impl fmt::Display for V2 {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "⟨{}, {}⟩", self.x, self.y)
     }
 }
@@ -94,9 +96,12 @@ impl Display for V2 {
 #[test]
 fn test_display() {
     let v = V2::new(3., 4.);
-    assert_eq!("⟨3, 4⟩", format!("{}", &v));
+    assert_eq!("⟨3, 4⟩", format!("{}", v));
 }
 
+// Implementing Neg trait allows us to specify how to negate a
+// vector using unary minus. That is, writing `-v` for a vector
+// `v` will invoke the `neg` method below.
 impl Neg for V2 {
     /// The result of negating a vector is a vector.
     type Output = V2;
@@ -107,6 +112,8 @@ impl Neg for V2 {
     }
 }
 
+// It's also often useful to overload operations like `Neg` for
+// pointers to values.
 impl<'a> Neg for &'a V2 {
     /// The result of negating a vector is a vector.
     type Output = V2;
@@ -117,6 +124,7 @@ impl<'a> Neg for &'a V2 {
     }
 }
 
+// Addition for `V2` says that we can add `V2` to a `V2` yielding a `V2`.
 impl Add<V2> for V2 {
     /// The result of adding two vectors is a vector.
     type Output = V2;
@@ -127,6 +135,8 @@ impl Add<V2> for V2 {
     }
 }
 
+// We also supporting adding a `V2` to a `V2` reference, and other
+// combinations below.
 impl<'a> Add<&'a V2> for V2 {
     /// The result of adding two vectors is a vector.
     type Output = V2;
@@ -169,6 +179,7 @@ fn add_test() {
     assert_eq!(w, &u + &v);
 }
 
+// Subtraction for `V2`.
 impl Sub<V2> for V2 {
     /// The result of subtracting two vectors is a vector.
     type Output = V2;
@@ -209,6 +220,7 @@ impl<'a> Sub<&'a V2> for V2 {
     }
 }
 
+// Multiplication by a scalar.
 impl Mul<V2> for f64 {
     /// The result of multiplying a vector by a scalar.
     type Output = V2;
