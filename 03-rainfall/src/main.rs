@@ -56,8 +56,50 @@
 use std::io::{BufRead, BufReader, Read, stdin, Write, stdout};
 
 fn main() {
-    let measurements = read_measurements(stdin());
-    write_output(stdout(), &calculate_results(&measurements));
+    transform(stdin(), stdout());
+}
+
+// Reads measurements from the given input stream and prints the summary to
+// the given output stream. This function encapsulates the entire
+// functionality of the rainfall program, which makes it possible to test
+// the whole thing from simulated input to expected output. This isn't
+// possible for every program, but when it is then it's pretty nice.
+fn transform<R: Read, W: Write>(input: R, output: W) {
+    let measurements = read_measurements(input);
+    write_output(output, &calculate_results(&measurements));
+}
+
+#[cfg(test)]
+mod transform_tests {
+    use super::transform;
+    use std::io::Cursor;
+
+    #[test]
+    fn no_input() {
+        assert_transform("", "No measurements provided.\n");
+    }
+
+    #[test]
+    fn input_is_3_4_5() {
+        assert_transform(
+            "3\n4\n5\n",
+            "Mean rainfall: 4 cm\nBelow count:   1\nAbove count:   1\n");
+    }
+
+    #[test]
+    fn input_is_3_4_5_and_garbage() {
+        assert_transform(
+            "3\n4\ngarbage\n5\n",
+            "Mean rainfall: 4 cm\nBelow count:   1\nAbove count:   1\n");
+    }
+
+    fn assert_transform(input: &str, expected_output: &str) {
+        let input = Cursor::new(input);
+        let mut output = Vec::new();
+        transform(input, &mut output);
+        let output_string = String::from_utf8(output).unwrap();
+        assert_eq!( output_string, expected_output );
+    }
 }
 
 struct Results {
