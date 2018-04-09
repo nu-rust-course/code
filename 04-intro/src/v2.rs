@@ -86,7 +86,8 @@ impl V2 {
 }
 
 // Display is the trait that controls how values are formatted using the
-// default format code "{}".
+// default format code "{}". (Trait Debug, which we derived, controls how
+// values are formatted using "{:?}".)
 impl fmt::Display for V2 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "⟨{}, {}⟩", self.x, self.y)

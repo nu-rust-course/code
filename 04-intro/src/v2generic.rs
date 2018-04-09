@@ -87,7 +87,7 @@ fn test_display() {
     assert_eq!("⟨3, 4⟩", format!("{}", &v));
 }
 
-impl<T: Copy + Neg> Neg for V2<T> {
+impl<T: Neg> Neg for V2<T> {
     /// The result of negating a vector is a vector.
     type Output = V2<T::Output>;
 
@@ -97,17 +97,17 @@ impl<T: Copy + Neg> Neg for V2<T> {
     }
 }
 
-impl<'a, T: Copy + Neg> Neg for &'a V2<T> {
+impl<'a, T: Neg + Clone> Neg for &'a V2<T> {
     /// The result of negating a vector is a vector.
     type Output = V2<T::Output>;
 
     /// Negates a vector.
     fn neg(self) -> V2<T::Output> {
-        -*self
+        -self.clone()
     }
 }
 
-impl<U: Copy, T: Copy + Add<U>> Add<V2<U>> for V2<T> {
+impl<U, T: Add<U>> Add<V2<U>> for V2<T> {
     /// The result of adding two vectors is a vector.
     type Output = V2<T::Output>;
 
@@ -117,33 +117,33 @@ impl<U: Copy, T: Copy + Add<U>> Add<V2<U>> for V2<T> {
     }
 }
 
-impl<'a, U: Copy, T: Copy + Add<U>> Add<&'a V2<U>> for V2<T> {
+impl<'a, U: Clone, T: Add<U>> Add<&'a V2<U>> for V2<T> {
     /// The result of adding two vectors is a vector.
     type Output = V2<T::Output>;
 
     /// Adds two vectors.
     fn add(self, other: &'a V2<U>) -> V2<T::Output> {
-        self + *other
+        self + other.clone()
     }
 }
 
-impl<'a, U: Copy, T: Copy + Add<U>> Add<V2<U>> for &'a V2<T> {
+impl<'a, U, T: Clone + Add<U>> Add<V2<U>> for &'a V2<T> {
     /// The result of adding two vectors is a vector.
     type Output = V2<T::Output>;
 
     /// Adds two vectors.
     fn add(self, other: V2<U>) -> V2<T::Output> {
-        *self + other
+        self.clone() + other
     }
 }
 
-impl<'a, 'b, U: Copy, T: Copy + Add<U>> Add<&'b V2<U>> for &'b V2<T> {
+impl<'a, 'b, U: Clone, T: Clone + Add<U>> Add<&'b V2<U>> for &'b V2<T> {
     /// The result of adding two vectors is a vector.
     type Output = V2<T::Output>;
 
     /// Adds two vectors.
     fn add(self, other: &'b V2<U>) -> V2<T::Output> {
-        *self + *other
+        self.clone() + other.clone()
     }
 }
 
@@ -160,54 +160,50 @@ fn add_test() {
 }
 
 impl<T, U> Sub<V2<U>> for V2<T>
-    where T: Copy + Sub<U>,
-          U: Copy
+    where T: Sub<U>
 {
     /// The result of subtracting two vectors is a vector.
     type Output = V2<T::Output>;
 
     /// Subtracts two vectors.
-    fn sub(self, other: V2<U>) -> V2<T::Output> {
+    fn sub(self, other: V2<U>) -> Self::Output {
         V2::new(self.x - other.x, self.y - other.y)
     }
 }
 
 impl<'a, T, U> Sub<&'a V2<U>> for V2<T>
-    where T: Copy + Sub<U>,
-          U: Copy
+    where T: Sub<&'a U>
 {
     /// The result of subtracting two vectors is a vector.
     type Output = V2<T::Output>;
 
     /// Subtracts two vectors.
-    fn sub(self, other: &'a V2<U>) -> V2<T::Output> {
-        self - *other
+    fn sub(self, other: &'a V2<U>) -> Self::Output {
+        V2::new(self.x - &other.x, self.y - &other.y)
     }
 }
 
 impl<'a, T, U> Sub<V2<U>> for &'a V2<T>
-    where T: Copy + Sub<U>,
-          U: Copy
+    where &'a T: Sub<U>
 {
     /// The result of subtracting two vectors is a vector.
-    type Output = V2<T::Output>;
+    type Output = V2<<&'a T as Sub<U>>::Output>;
 
     /// Subtracts two vectors.
-    fn sub(self, other: V2<U>) -> V2<T::Output> {
-        *self - other
+    fn sub(self, other: V2<U>) -> Self::Output {
+        V2::new(&self.x - other.x, &self.y - other.y)
     }
 }
 
 impl<'a, 'b, T, U> Sub<&'b V2<U>> for &'a V2<T>
-    where T: Copy + Sub<U>,
-          U: Copy
+    where &'a T: Sub<&'b U>
 {
     /// The result of subtracting two vectors is a vector.
-    type Output = V2<T::Output>;
+    type Output = V2<<&'a T as Sub<&'b U>>::Output>;
 
     /// Subtracts two vectors.
-    fn sub(self, other: &'b V2<U>) -> V2<T::Output> {
-        *self - *other
+    fn sub(self, other: &'b V2<U>) -> Self::Output {
+        V2::new(&self.x - &other.x, &self.y - &other.y)
     }
 }
 
