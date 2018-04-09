@@ -260,6 +260,8 @@ mod write_output_tests {
     fn assert_write(expected: &str, results: &Results) {
         let mut writer = Cursor::new(vec![]);
         write_output(&mut writer, results);
-        assert_eq!(expected.as_bytes(), &*writer.into_inner());
+        assert_eq!(expected, String::from_utf8(writer.into_inner()).unwrap());
+        // consider the previous line versus:
+        // assert_eq!(expected.as_bytes(), &*writer.into_inner());
     }
 }
