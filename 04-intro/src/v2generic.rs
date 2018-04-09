@@ -84,7 +84,7 @@ impl<T: fmt::Display> fmt::Display for V2<T> {
 #[test]
 fn test_display() {
     let v = V2::new(3, 4);
-    assert_eq!("⟨3, 4⟩", format!("{}", &v));
+    assert_eq!("⟨3, 4⟩", v.to_string());
 }
 
 impl<T: Neg> Neg for V2<T> {
