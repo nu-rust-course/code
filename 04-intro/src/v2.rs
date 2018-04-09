@@ -97,7 +97,7 @@ impl fmt::Display for V2 {
 #[test]
 fn test_display() {
     let v = V2::new(3., 4.);
-    assert_eq!("⟨3, 4⟩", format!("{}", v));
+    assert_eq!("⟨3, 4⟩", v.to_string());
 }
 
 // Implementing Neg trait allows us to specify how to negate a
