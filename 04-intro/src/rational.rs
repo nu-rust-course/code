@@ -186,8 +186,8 @@ mod test {
 
     #[test]
     fn display() {
-        assert_eq!( "5", format!("{}", Rational::new(5, 1)) );
-        assert_eq!( "5/2", format!("{}", Rational::new(5, 2)) );
+        assert_eq!( "5", Rational::new(5, 1).to_string() );
+        assert_eq!( "5/2", Rational::new(5, 2).to_string() );
     }
 
     #[test]
