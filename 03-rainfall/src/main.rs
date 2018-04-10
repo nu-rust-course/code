@@ -161,14 +161,14 @@ mod read_measurements_tests {
 
 // Calculates the results for the given dataset.
 fn calculate_results(fs: &[f64]) -> Results {
-    let m = mean(fs);
-    let b = fs.iter().filter(|x| m - 5.0 <= **x && **x < m).count();
-    let a = fs.iter().filter(|x| m < **x && **x <= m + 5.0).count();
+    let mean = mean(fs);
+    let below = fs.iter().filter(|x| mean - 5.0 <= **x && **x < mean).count();
+    let above = fs.iter().filter(|x| mean < **x && **x <= mean + 5.0).count();
 
     Results {
-        mean:  m,
-        above: a,
-        below: b,
+        mean,
+        above,
+        below,
     }
 }
 
