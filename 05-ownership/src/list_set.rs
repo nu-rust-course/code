@@ -91,6 +91,27 @@ impl<T> Set<T> {
     pub fn len(&self) -> usize {
         self.len
     }
+
+    /// Returns a borrowing iterator over the elements of the set.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use ownership::list_set::Set;
+    /// use std::iter::FromIterator;
+    ///
+    /// let set = Set::from_iter(vec![1, 3, 5]);
+    /// let mut result = Vec::new();
+    ///
+    /// for elt in set.iter() {
+    ///     result.push(elt);
+    /// }
+    ///
+    /// assert_eq!( result, &[&1, &3, &5] );
+    /// ```
+    pub fn iter(&self) -> Iter<T> {
+        self.into_iter()
+    }
 }
 
 impl<T> Default for Set<T> {
