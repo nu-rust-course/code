@@ -282,11 +282,10 @@ impl<'a, T: 'a> CursorMut<'a, T> {
     }
 
     fn insert(&mut self, data: T) {
-        if let Some(ref mut link) = self.link {
-            let old_link = link.take();
-            **link = Some(Box::new(Node {
+        if let Some(ref mut link_ptr) = self.link {
+            **link_ptr = Some(Box::new(Node {
                 data,
-                link: old_link,
+                link: link_ptr.take(),
             }));
             *self.len += 1;
         } else {
