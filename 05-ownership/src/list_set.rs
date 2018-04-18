@@ -27,6 +27,7 @@ pub struct Set<T> {
     head: Link<T>,
     len: usize,
 }
+// Invariant: the elements must be sorted according to <T as Ord>.
 
 type Link<T> = Option<Box<Node<T>>>;
 
