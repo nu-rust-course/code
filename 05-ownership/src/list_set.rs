@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 //! Sets, represented as sorted, singly-linked lists.
 
-use std::cmp::Ordering;
-use std::cmp::Ordering::*;
+use std::cmp::Ordering::{self, Less, Equal, Greater};
 use std::default::Default;
 use std::iter::{Extend, FromIterator};
 use std::mem;
