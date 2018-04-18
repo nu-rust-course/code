@@ -1,6 +1,4 @@
-use std::cmp::Ordering;
 use std::cmp::Ordering::*;
-use std::mem;
 
 pub struct BST<K, V>(Link<K, V>);
 
@@ -31,7 +29,7 @@ impl<K: Ord, V> BST<K, V> {
     }
 
     pub fn find_mut(&mut self, key: &K) -> Option<&mut V> {
-        Node::find_mut_rec(&mut self.0, key)
+        Node::find_mut_iter(&mut self.0, key)
     }
 }
 
@@ -44,6 +42,7 @@ impl<K, V> Node<K, V> {
 }
 
 impl<K: Ord, V> Node<K, V> {
+    #[allow(dead_code)]
     fn find_rec<'a, 'b>(ptr: &'a Link<K, V>, key: &'b K) -> Option<&'a V> {
         if let &Some(ref n) = ptr {
             match key.cmp(&n.key) {
@@ -68,6 +67,7 @@ impl<K: Ord, V> Node<K, V> {
         None
     }
 
+    #[allow(dead_code)]
     fn find_mut_rec<'a, 'b>(ptr: &'a mut Link<K, V>, key: &'b K)
         -> Option<&'a mut V>
     {
@@ -114,6 +114,7 @@ impl<'a, K, V> CursorMut<'a, K, V> {
         self.0.as_ref().map(|n| &n.key)
     }
 
+    #[allow(dead_code)]
     fn into_value(self) -> Option<&'a mut V> {
         self.0.map(|n| &mut n.value)
     }
