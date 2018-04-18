@@ -39,8 +39,7 @@ impl<K, V> Default for BST<K, V> {
 
 impl<K: Ord, V> BST<K, V> {
     pub fn find(&self, key: &K) -> Option<&V> {
-        Node::find_iter(&self.0, key)
-    }
+        Node::find_iter(&self.0, key) }
 
     pub fn find_mut(&mut self, key: &K) -> Option<&mut V> {
         Node::find_mut_iter(&mut self.0, key)
@@ -143,7 +142,7 @@ impl<K: Ord, V> Node<K, V> {
             }
 
             Some(ref mut node_ptr) => {
-                match node_ptr.key.cmp(&key) {
+                match key.cmp(&node_ptr.key) {
                     Less    => Node::insert_rec(&mut node_ptr.left, key, value),
                     Greater => Node::insert_rec(&mut node_ptr.right, key, value),
                     Equal   =>
@@ -177,4 +176,24 @@ impl<'a, K, V> CursorMut<'a, K, V> {
     fn into_value(self) -> Option<&'a mut V> {
         self.0.map(|n| &mut n.value)
     }
+}
+
+#[test]
+fn bst_test() {
+    let mut bst = BST::new();
+    assert_eq!( bst.insert("one", 1), None );
+    assert_eq!( bst.insert("two", 2), None );
+    assert_eq!( bst.insert("three", 3), None );
+
+    assert_eq!( bst.find(&"one"), Some(&1) );
+    assert_eq!( bst.find(&"two"), Some(&2) );
+    assert_eq!( bst.find(&"three"), Some(&3) );
+    assert_eq!( bst.find(&"four"), None );
+
+    *bst.find_mut(&"three").unwrap() = 4;
+
+    assert_eq!( bst.find(&"three"), Some(&4) );
+
+    assert_eq!( bst.insert("four", 7), None );
+    assert_eq!( bst.insert("four", 8), Some(("four", 7)) );
 }
