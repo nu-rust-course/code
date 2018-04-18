@@ -154,7 +154,7 @@ impl<K: Ord, V> Node<K, V> {
         }
     }
 
-    // TODO: insert_iter
+    // Challenge: insert_iter
 }
 
 impl<'a, K, V> CursorMut<'a, K, V> {
