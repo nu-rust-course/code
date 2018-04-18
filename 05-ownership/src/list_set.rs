@@ -250,26 +250,27 @@ impl<'a, T: 'a> CursorMut<'a, T> {
     }
 
     fn data(&mut self) -> &mut T {
-        if let Some(&mut Some(ref mut node)) = self.link {
-            &mut node.data
+        if let Some(&mut Some(ref mut node_ptr)) = self.link {
+            &mut node_ptr.data
         } else {
             panic!("CursorMut::data: empty cursor");
         }
     }
 
     fn advance(&mut self) {
-        if let Some(link) = self.link.take() {
-            self.link = link.as_mut().map(|node| &mut node.link);
-        } else {
-            panic!("CursorMut::advance: no next link");
-        }
+        let link = self.link.take().expect("CursorMut::advance: empty cursor");
+//      match link {
+//          &mut Some(ref mut node_ptr) => self.link = Some(&mut node_ptr.link),
+//          _ => panic!("CursorMut::advance: no next link"),
+//      }
+        self.link = Some(&mut link.as_mut().expect("CursorMut::advance: no next link").link);
     }
 
     fn remove(&mut self) -> T {
         if let Some(ref mut link) = self.link {
-            if let Some(node_ptr) = mem::replace(*link, None) {
+            if let Some(node_ptr) = link.take() {
                 let node = *node_ptr;
-                mem::replace(*link, node.link);
+                **link = node.link;
                 *self.len -= 1;
                 node.data
             } else {
@@ -282,12 +283,11 @@ impl<'a, T: 'a> CursorMut<'a, T> {
 
     fn insert(&mut self, data: T) {
         if let Some(ref mut link) = self.link {
-            let old_link = mem::replace(*link, None);
-            let new_link = Some(Box::new(Node {
-                data: data,
+            let old_link = link.take();
+            **link = Some(Box::new(Node {
+                data,
                 link: old_link,
             }));
-            mem::replace(*link, new_link);
             *self.len += 1;
         } else {
             panic!("CursorMut::insert: empty cursor");
