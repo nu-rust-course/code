@@ -120,7 +120,7 @@ impl<'a, K, V> CursorMut<'a, K, V> {
         });
     }
 
-    fn key(&mut self) -> Option<&K> {
+    fn key(&self) -> Option<&K> {
         self.0.as_ref().map(|n| &n.key)
     }
 
