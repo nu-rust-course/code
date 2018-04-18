@@ -1,7 +1,10 @@
 use std::cmp::Ordering::*;
+use std::mem;
 
+#[derive(Debug)]
 pub struct BST<K, V>(Link<K, V>);
 
+#[derive(Debug)]
 struct Node<K, V> {
     key:   K,
     value: V,
@@ -11,6 +14,7 @@ struct Node<K, V> {
 
 type Link<K, V> = Option<Box<Node<K, V>>>;
 
+#[derive(Debug)]
 struct CursorMut<'a, K: 'a, V: 'a>(Option<&'a mut Node<K, V>>);
 
 impl<K, V> BST<K, V> {
@@ -40,6 +44,10 @@ impl<K: Ord, V> BST<K, V> {
 
     pub fn find_mut(&mut self, key: &K) -> Option<&mut V> {
         Node::find_mut_iter(&mut self.0, key)
+    }
+
+    pub fn insert(&mut self, key: K, value: V) -> Option<(K, V)> {
+        Node::insert_rec(&mut self.0, key, value)
     }
 }
 
@@ -121,6 +129,32 @@ impl<K: Ord, V> Node<K, V> {
             }
         }
     }
+
+    fn insert_rec(ptr: &mut Link<K, V>, key: K, value: V) -> Option<(K, V)> {
+        match *ptr {
+            None => {
+                *ptr = Some(Box::new(Node {
+                    key,
+                    value,
+                    left: None,
+                    right: None,
+                }));
+                None
+            }
+
+            Some(ref mut node_ptr) => {
+                match node_ptr.key.cmp(&key) {
+                    Less    => Node::insert_rec(&mut node_ptr.left, key, value),
+                    Greater => Node::insert_rec(&mut node_ptr.right, key, value),
+                    Equal   =>
+                        Some((mem::replace(&mut node_ptr.key, key),
+                              mem::replace(&mut node_ptr.value, value))),
+                }
+            }
+        }
+    }
+
+    // TODO: insert_iter
 }
 
 impl<'a, K, V> CursorMut<'a, K, V> {
