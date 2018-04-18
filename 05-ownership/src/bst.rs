@@ -114,7 +114,6 @@ impl<'a, K, V> CursorMut<'a, K, V> {
         self.0.as_ref().map(|n| &n.key)
     }
 
-    #[allow(dead_code)]
     fn into_value(self) -> Option<&'a mut V> {
         self.0.map(|n| &mut n.value)
     }
