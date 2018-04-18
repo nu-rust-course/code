@@ -18,8 +18,18 @@ impl<K, V> BST<K, V> {
         BST(None)
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.0.is_none()
+    }
+
     pub fn len(&self) -> usize {
         Node::len(&self.0)
+    }
+}
+
+impl<K, V> Default for BST<K, V> {
+    fn default() -> Self {
+        BST::new()
     }
 }
 
@@ -35,7 +45,7 @@ impl<K: Ord, V> BST<K, V> {
 
 impl<K, V> Node<K, V> {
     fn len(ptr: &Link<K, V>) -> usize {
-        if let &Some(ref n) = ptr {
+        if let Some(ref n) = *ptr {
             1 + Node::len(&n.left) + Node::len(&n.right)
         } else {0}
     }
@@ -44,7 +54,7 @@ impl<K, V> Node<K, V> {
 impl<K: Ord, V> Node<K, V> {
     #[allow(dead_code)]
     fn find_rec<'a, 'b>(ptr: &'a Link<K, V>, key: &'b K) -> Option<&'a V> {
-        if let &Some(ref n) = ptr {
+        if let Some(ref n) = *ptr {
             match key.cmp(&n.key) {
                 Less    => Node::find_rec(&n.left, key),
                 Greater => Node::find_rec(&n.right, key),
@@ -56,7 +66,7 @@ impl<K: Ord, V> Node<K, V> {
     fn find_iter<'a, 'b>(mut ptr: &'a Link<K, V>, key: &'b K)
         -> Option<&'a V>
     {
-        while let &Some(ref n) = ptr {
+        while let Some(ref n) = *ptr {
             match key.cmp(&n.key) {
                 Less    => { ptr = &n.left; }
                 Greater => { ptr = &n.right; }
@@ -71,7 +81,7 @@ impl<K: Ord, V> Node<K, V> {
     fn find_mut_rec<'a, 'b>(ptr: &'a mut Link<K, V>, key: &'b K)
         -> Option<&'a mut V>
     {
-        if let &mut Some(ref mut n) = ptr {
+        if let Some(ref mut n) = *ptr {
             match key.cmp(&n.key) {
                 Less    => Node::find_mut_rec(&mut n.left, key),
                 Greater => Node::find_mut_rec(&mut n.right, key),

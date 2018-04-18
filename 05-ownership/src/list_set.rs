@@ -682,12 +682,12 @@ impl<T: Ord + Clone> Set<T> {
                 }
             }
 
-            while let Some(a) = i.next() {
+            for a in i {
                 cur.insert(a.clone());
                 cur.advance();
             }
 
-            while let Some(b) = j.next() {
+            for b in j {
                 cur.insert(b.clone());
                 cur.advance();
             }
@@ -739,7 +739,7 @@ impl<T: Ord + Clone> Set<T> {
                 }
             }
 
-            while let Some(a) = i.next() {
+            for a in i {
                 cur.insert(a.clone());
                 cur.advance();
             }
@@ -792,12 +792,12 @@ impl<T: Ord + Clone> Set<T> {
                 }
             }
 
-            while let Some(a) = i.next() {
+            for a in i {
                 cur.insert(a.clone());
                 cur.advance();
             }
 
-            while let Some(b) = j.next() {
+            for b in j {
                 cur.insert(b.clone());
                 cur.advance();
             }
