@@ -23,7 +23,7 @@ impl<K, V> BST<K, V> {
     }
 
     pub fn len(&self) -> usize {
-        Node::len(&self.0)
+        Node::len_iter(&self.0)
     }
 }
 
@@ -44,10 +44,26 @@ impl<K: Ord, V> BST<K, V> {
 }
 
 impl<K, V> Node<K, V> {
-    fn len(ptr: &Link<K, V>) -> usize {
-        if let Some(ref n) = *ptr {
-            1 + Node::len(&n.left) + Node::len(&n.right)
+    #[allow(dead_code)]
+    fn len_rec(ptr: &Link<K, V>) -> usize {
+        if let Some(ref node_ptr) = *ptr {
+            1 + Node::len_rec(&node_ptr.left) + Node::len_rec(&node_ptr.right)
         } else {0}
+    }
+
+    fn len_iter(ptr: &Link<K, V>) -> usize {
+        let mut result = 0;
+        let mut stack = vec![ptr];
+
+        while let Some(each) = stack.pop() {
+            if let Some(ref node_ptr) = *each {
+                result += 1;
+                stack.push(&node_ptr.left);
+                stack.push(&node_ptr.right);
+            }
+        }
+
+        result
     }
 }
 
