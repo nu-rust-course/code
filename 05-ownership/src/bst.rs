@@ -123,7 +123,7 @@ impl<K: Ord, V> Node<K, V> {
             match cur.key().map(|k| key.cmp(k)) {
                 Some(Less)     => { cur.left(); }
                 Some(Greater)  => { cur.right(); }
-                Some(Equal)    => { return cur.into_value(); }
+                Some(Equal)    => { return cur.into_mut_value(); }
                 None           => { return None; }
             }
         }
@@ -158,22 +158,23 @@ impl<K: Ord, V> Node<K, V> {
 
 impl<'a, K, V> CursorMut<'a, K, V> {
     fn left(&mut self) {
-        self.0.take().map(|node| {
-            self.0 = node.left.as_mut().map(|node| &mut **node);
-        });
+        self.0 = self.0.take()
+            .expect("CursorMut::left: empty cursor")
+            .left.as_mut().map(Box::as_mut);
     }
 
     fn right(&mut self) {
-        self.0.take().map(|node| {
-            self.0 = node.right.as_mut().map(|node| &mut **node);
-        });
+        match self.0.take().expect("CursorMut::right: empty cursor").right {
+            Some(ref mut node_ptr) => self.0 = Some(&mut **node_ptr),
+            None => self.0 = None,
+        }
     }
 
     fn key(&self) -> Option<&K> {
         self.0.as_ref().map(|n| &n.key)
     }
 
-    fn into_value(self) -> Option<&'a mut V> {
+    fn into_mut_value(self) -> Option<&'a mut V> {
         self.0.map(|n| &mut n.value)
     }
 }
