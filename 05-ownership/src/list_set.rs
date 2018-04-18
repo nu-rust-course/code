@@ -90,33 +90,6 @@ impl<T> Set<T> {
     pub fn len(&self) -> usize {
         self.len
     }
-
-    /// Returns a draining iterator, which consumes the elements of
-    /// the set as it iterates.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use ownership::list_set::Set;
-    /// let mut set = Set::new();
-    ///
-    /// set.insert(2);
-    /// set.insert(3);
-    /// set.insert(4);
-    ///
-    /// {
-    ///     let mut drain = set.drain();
-    ///     assert_eq!(Some(2), drain.next());
-    ///     assert_eq!(Some(3), drain.next());
-    ///     assert_eq!(Some(4), drain.next());
-    ///     assert_eq!(None, drain.next());
-    /// }
-    ///
-    /// assert!(set.is_empty());
-    /// ```
-    pub fn drain(&mut self) -> Drain<T> {
-        Drain(self)
-    }
 }
 
 impl<T> Default for Set<T> {
@@ -434,39 +407,6 @@ impl<T> IntoIterator for Set<T> {
 
     fn into_iter(self) -> IntoIter<T> {
         IntoIter(self)
-    }
-}
-
-/// A draining iterator.
-#[derive(Debug)]
-pub struct Drain<'a, T: 'a>(&'a mut Set<T>);
-
-impl<'a, T> Iterator for Drain<'a, T> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<T> {
-        let mut cur = CursorMut::new(self.0);
-        if cur.is_empty() {
-            None
-        } else {
-            Some(cur.remove())
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.0.len, Some(self.0.len))
-    }
-}
-
-impl<'a, T> ExactSizeIterator for Drain<'a, T> {
-    fn len(&self) -> usize {
-        self.0.len
-    }
-}
-
-impl<'a, T> Drop for Drain<'a, T> {
-    fn drop(&mut self) {
-        while let Some(_) = self.next() {}
     }
 }
 
