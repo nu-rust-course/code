@@ -69,16 +69,5 @@ mod tests {
             expected_words.into_iter().map(|&s| s.to_owned()) .collect();
         assert_eq!( actual_words, expected_words );
     }
-
-//    fn assert_words_lower(input: &str, expected_words: &[&str]) {
-//        use super::{Words, is_word_char};
-//        let actual_words: Vec<String> =
-//            Words::new(input.chars().flat_map(char::to_lowercase),
-//                       is_word_char)
-//                .collect();
-//        let expected_words: Vec<String> =
-//            expected_words.into_iter().map(|&s| s.to_owned()) .collect();
-//        assert_eq!( actual_words, expected_words );
-//    }
 }
 
