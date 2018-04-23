@@ -1,4 +1,4 @@
-use std::ops::IndexMut;
+use std::mem;
 
 /// First, a Vector iterator. We're make a read-only, by-reference
 /// iterator, which is the default (and the only one we can do without
@@ -81,19 +81,11 @@ impl<'a, T> DoubleEndedIterator for SliceIter<'a, T> {
     }
 }
 
-/// We might try to implement an iterator that allows mutating
-/// the underlying slice, but it turns out no matter what we do,
-/// there's a borrowing problem.
-pub struct SliceIterMut<'a, T: 'a> {
-    slice: &'a mut [T],
-    start: usize,
-    limit: usize
-}
+pub struct SliceIterMut<'a, T: 'a>(&'a mut [T]);
 
 impl<'a, T> SliceIterMut<'a, T> {
     pub fn of_slice(slice: &'a mut [T]) -> Self {
-        let limit = slice.len();
-        SliceIterMut { slice, start: 0, limit, }
+        SliceIterMut(slice)
     }
 
     pub fn of_vec(vec: &'a mut Vec<T>) -> Self {
@@ -105,12 +97,11 @@ impl<'a, T> Iterator for SliceIterMut<'a, T> {
     type Item = &'a mut T;
 
     fn next(&mut self) -> Option<&'a mut T> {
-        if self.start < self.limit {
-            let result = self.slice.index_mut(self.start);
-            self.start += 1;
-            Some(result);
-            None // nooooooo
-        } else {None}
+        let tmp = mem::replace(&mut self.0, &mut []);
+        tmp.split_first_mut().map(|(first, rest)| {
+            self.0 = rest;
+            first
+        })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -120,8 +111,16 @@ impl<'a, T> Iterator for SliceIterMut<'a, T> {
 
 impl<'a, T> ExactSizeIterator for SliceIterMut<'a, T> {
     fn len(&self) -> usize {
-        self.limit - self.start
+        self.0.len()
     }
 }
 
-
+impl<'a, T> DoubleEndedIterator for SliceIterMut<'a, T> {
+    fn next_back(&mut self) -> Option<<Self as Iterator>::Item> {
+        let tmp = mem::replace(&mut self.0, &mut []);
+        tmp.split_last_mut().map(|(last, rest)| {
+            self.0 = rest;
+            last
+        })
+    }
+}
