@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Sets, represented as sorted, singly-linked lists.
 
 use std::cmp::Ordering::{self, Less, Equal, Greater};
@@ -110,17 +111,6 @@ impl<T> Set<T> {
     /// ```
     pub fn iter(&self) -> Iter<T> {
         self.into_iter()
-    }
-
-    /// Returns an iterator that removes and returns elements satisfying a predicate, leaving the
-    /// rest in the set.
-    pub fn drain_filter<P: FnMut(&T) -> bool>(&mut self, pred: P) -> DrainFilter<T, P> {
-        let len = self.len;
-        DrainFilter {
-            cursor: CursorMut::new(self),
-            pred,
-            len,
-        }
     }
 }
 
@@ -263,7 +253,6 @@ impl<T: Ord> Set<T> {
     }
 }
 
-#[derive(Debug)]
 struct CursorMut<'a, T: 'a> {
     link: Option<&'a mut Link<T>>,
     len: &'a mut usize,
@@ -815,36 +804,6 @@ impl<T: Ord + Clone> Set<T> {
         }
 
         result
-    }
-}
-
-#[derive(Debug)]
-pub struct DrainFilter<'a, T: 'a, P> {
-    cursor: CursorMut<'a, T>,
-    pred: P,
-    len: usize,
-}
-
-impl<'a, T, P> Iterator for DrainFilter<'a, T, P>
-    where P: FnMut(&T) -> bool
-{
-    type Item = T;
-
-    fn next(&mut self) -> Option<T> {
-        while !self.cursor.is_empty() {
-            self.len -= 1;
-            if (self.pred)(self.cursor.data()) {
-                return Some(self.cursor.remove());
-            } else {
-                self.cursor.advance()
-            }
-        }
-
-        None
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (0, Some(self.len))
     }
 }
 
