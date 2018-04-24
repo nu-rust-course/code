@@ -819,7 +819,9 @@ impl<T: Ord + Clone> Set<T> {
 }
 
 #[derive(Debug)]
-pub struct DrainFilter<'a, T: 'a, P> {
+pub struct DrainFilter<'a, T: 'a, P>
+    where P: FnMut(&T) -> bool
+{
     cursor: CursorMut<'a, T>,
     pred: P,
     len: usize,
@@ -845,6 +847,14 @@ impl<'a, T, P> Iterator for DrainFilter<'a, T, P>
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         (0, Some(self.len))
+    }
+}
+
+impl<'a, T, P> Drop for DrainFilter<'a, T, P>
+    where P: FnMut(&T) -> bool
+{
+    fn drop(&mut self) {
+        for _ in self {}
     }
 }
 
