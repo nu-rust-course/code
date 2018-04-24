@@ -158,9 +158,16 @@ impl<K: Ord, V> Node<K, V> {
 
 impl<'a, K, V> CursorMut<'a, K, V> {
     fn left(&mut self) {
-        self.0 = self.0.take()
-            .expect("CursorMut::left: empty cursor")
-            .left.as_mut().map(Box::as_mut);
+//        self.0 = self.0.take()
+//            .expect("CursorMut::left: empty cursor")
+//            .left.as_mut().map(Box::as_mut);
+
+        let step1: Option<&'a mut Node<K, V>>      = self.0.take();
+        let step2: &'a mut Node<K, V>              = step1.expect("stuff");
+        let step3: &'a mut Option<Box<Node<K, V>>> = &mut step2.left;
+        let step4: Option<&'a mut Box<Node<K, V>>> = step3.as_mut();
+        let step5: Option<&'a mut Node<K, V>>      = step4.map(Box::as_mut);
+        self.0 = step5;
     }
 
     fn right(&mut self) {
