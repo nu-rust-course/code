@@ -1,4 +1,4 @@
-pub trait Iter8or {
+pub trait Iter8or: Sized {
     type Item;
 
     fn next(&mut self) -> Option<Self::Item>;
@@ -7,27 +7,50 @@ pub trait Iter8or {
         (0, None)
     }
 
-    fn map<B, F: FnMut(Self::Item) -> B>(self, fun: F) -> Map<Self, F>
-        where Self: Sized
-    {
+    fn count(mut self) -> usize {
+        let mut result = 0;
+
+        while let Some(_) = self.next() {
+            result += 1;
+        }
+
+        result
+    }
+
+    fn last(mut self) -> Option<Self::Item> {
+        let mut result = None;
+
+        while let Some(item) = self.next() {
+            result = Some(item);
+        }
+
+        result
+    }
+
+    fn nth(mut self, mut n: usize) -> Option<Self::Item> {
+        while n > 0 {
+            if self.next().is_none() { return None; }
+            n -= 1;
+        }
+
+        self.next()
+    }
+
+    fn map<B, F: FnMut(Self::Item) -> B>(self, fun: F) -> Map<Self, F> {
         Map {
             base: self,
             fun
         }
     }
 
-    fn filter<P: FnMut(&Self::Item) -> bool>(self, pred: P) -> Filter<Self, P>
-        where Self: Sized
-    {
+    fn filter<P: FnMut(&Self::Item) -> bool>(self, pred: P) -> Filter<Self, P> {
         Filter {
             base: self,
             pred
         }
     }
 
-    fn enumerate(self) -> Enumerate<Self>
-        where Self: Sized
-    {
+    fn enumerate(self) -> Enumerate<Self> {
         Enumerate { next: 0, base: self }
     }
 }
@@ -161,6 +184,14 @@ impl<I> Iter8or for Enumerate<I>
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        unimplemented!()
+        self.base.size_hint()
+    }
+}
+
+impl<I> ExactSizeIter8or for Enumerate<I>
+    where I: ExactSizeIter8or
+{
+    fn len(&self) -> usize {
+        self.base.len()
     }
 }
