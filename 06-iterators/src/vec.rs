@@ -1,4 +1,5 @@
 use std::mem;
+use super::iter8or::*;
 
 /// First, a Vector iterator. We're make a read-only, by-reference
 /// iterator, which is the default (and the only one we can do without
