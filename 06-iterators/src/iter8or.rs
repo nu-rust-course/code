@@ -1,3 +1,5 @@
+use std::mem;
+
 pub trait Iter8or: Sized {
     type Item;
 
@@ -52,6 +54,12 @@ pub trait Iter8or: Sized {
 
     fn enumerate(self) -> Enumerate<Self> {
         Enumerate { next: 0, base: self }
+    }
+
+    fn chain<U>(self, other: U) -> Chain<Self, U::IntoIter>
+        where U: IntoIter8or<Item = Self::Item>
+    {
+        Chain(ChainImpl::Both(self, other.into_iter()))
     }
 }
 
@@ -193,5 +201,92 @@ impl<I> ExactSizeIter8or for Enumerate<I>
 {
     fn len(&self) -> usize {
         self.base.len()
+    }
+}
+
+pub struct Chain<A, B>(ChainImpl<A, B>);
+
+enum ChainImpl<A, B> {
+    Both(A, B),
+    JustB(B),
+    Done,
+}
+
+impl<A, B> Iter8or for Chain<A, B>
+    where A: Iter8or,
+          B: Iter8or<Item = A::Item>
+{
+    type Item = A::Item;
+
+    fn next(&mut self) -> Option<A::Item> {
+        match mem::replace(&mut self.0, ChainImpl::Done) {
+            ChainImpl::Both(mut a, mut b) => {
+                match a.next() {
+                    Some(result) => {
+                        self.0 = ChainImpl::Both(a, b);
+                        Some(result)
+                    }
+
+                    None => {
+                        match b.next() {
+                            Some(result) => {
+                                self.0 = ChainImpl::JustB(b);
+                                Some(result)
+                            }
+
+                            None => {
+                                self.0 = ChainImpl::Done;
+                                None
+                            }
+                        }
+                    }
+                }
+            }
+
+            ChainImpl::JustB(mut b) => {
+                match b.next() {
+                    Some(result) => Some(result),
+
+                    None => {
+                        self.0 = ChainImpl::Done;
+                        None
+                    }
+                }
+            }
+
+            ChainImpl::Done => None,
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self.0 {
+            ChainImpl::Both(ref a, ref b) => {
+                let (a_lower, a_upper_option) = a.size_hint();
+                let (b_lower, b_upper_option) = b.size_hint();
+
+                let lower = a_lower + b_lower;
+                let upper_option = a_upper_option.and_then(|a_upper|
+                    b_upper_option.map(|b_upper| a_upper + b_upper));
+
+                (lower, upper_option)
+
+            }
+
+            ChainImpl::JustB(ref b) => b.size_hint(),
+
+            ChainImpl::Done => (0, Some(0)),
+        }
+    }
+}
+
+impl<A, B> ExactSizeIter8or for Chain<A, B>
+    where A: ExactSizeIter8or, B: ExactSizeIter8or<Item = A::Item>
+{
+    fn len(&self) -> usize {
+        match self.0 {
+            ChainImpl::Both(ref a, ref b) => a.len() + b.len(),
+            ChainImpl::JustB(ref b) => b.len(),
+            ChainImpl::Done => 0,
+        }
     }
 }
