@@ -25,6 +25,10 @@ pub trait ExactSizeIter8or : Iter8or {
     }
 }
 
+pub trait DoubleEndedIter8or : Iter8or {
+    fn next_back(&mut self) -> Option<Self::Item>;
+}
+
 impl<T: Iter8or> IntoIter8or for T {
     type Item = T::Item;
     type IntoIter = T;
