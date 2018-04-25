@@ -10,7 +10,7 @@ pub struct VecIter<'a, T: 'a> {
     pos:  usize,
 }
 
-impl<'a, T> Iterator for VecIter<'a, T> {
+impl<'a, T> Iter8or for VecIter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<&'a T> {
@@ -22,18 +22,18 @@ impl<'a, T> Iterator for VecIter<'a, T> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        // Uses `ExactSizeIterator` from below.
+        // Uses `ExactSizeIter8or` from below.
         (self.len(), Some(self.len()))
     }
 }
 
-impl<'a, T> ExactSizeIterator for VecIter<'a, T> {
+impl<'a, T> ExactSizeIter8or for VecIter<'a, T> {
     fn len(&self) -> usize {
         self.base.len() - self.pos
     }
 }
 
-/// What if we want to implement `DoubleEndedIterator` for `VecIter`?
+/// What if we want to implement `DoubleEndedIter8or` for `VecIter`?
 /// Well, we would have to add another field. But wait a minute.
 /// Remember how a reference to a vector isn't usually a useful type,
 /// and we'd usually use a slice instead? Well, a slice already supports
@@ -52,7 +52,7 @@ impl<'a, T> SliceIter<'a, T> {
     }
 }
 
-impl<'a, T> Iterator for SliceIter<'a, T> {
+impl<'a, T> Iter8or for SliceIter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<&'a T> {
@@ -67,13 +67,13 @@ impl<'a, T> Iterator for SliceIter<'a, T> {
     }
 }
 
-impl<'a, T> ExactSizeIterator for SliceIter<'a, T> {
+impl<'a, T> ExactSizeIter8or for SliceIter<'a, T> {
     fn len(&self) -> usize {
         self.0.len()
     }
 }
 
-impl<'a, T> DoubleEndedIterator for SliceIter<'a, T> {
+impl<'a, T> DoubleEndedIter8or for SliceIter<'a, T> {
     fn next_back(&mut self) -> Option<&'a T> {
         self.0.split_last().map(|(result, rest)| {
             self.0 = rest;
@@ -94,7 +94,7 @@ impl<'a, T> SliceIterMut<'a, T> {
     }
 }
 
-impl<'a, T> Iterator for SliceIterMut<'a, T> {
+impl<'a, T> Iter8or for SliceIterMut<'a, T> {
     type Item = &'a mut T;
 
     fn next(&mut self) -> Option<&'a mut T> {
@@ -110,14 +110,14 @@ impl<'a, T> Iterator for SliceIterMut<'a, T> {
     }
 }
 
-impl<'a, T> ExactSizeIterator for SliceIterMut<'a, T> {
+impl<'a, T> ExactSizeIter8or for SliceIterMut<'a, T> {
     fn len(&self) -> usize {
         self.0.len()
     }
 }
 
-impl<'a, T> DoubleEndedIterator for SliceIterMut<'a, T> {
-    fn next_back(&mut self) -> Option<<Self as Iterator>::Item> {
+impl<'a, T> DoubleEndedIter8or for SliceIterMut<'a, T> {
+    fn next_back(&mut self) -> Option<<Self as Iter8or>::Item> {
         let tmp = mem::replace(&mut self.0, &mut []);
         tmp.split_last_mut().map(|(last, rest)| {
             self.0 = rest;
