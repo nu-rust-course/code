@@ -1,3 +1,4 @@
+use std::cmp;
 use std::mem;
 
 pub trait Iter8or: Sized {
@@ -52,6 +53,25 @@ pub trait Iter8or: Sized {
         }
     }
 
+    fn max_by_key<B, F>(mut self, mut get_key: F) -> Option<Self::Item>
+        where B: Ord,
+              F: FnMut(&Self::Item) -> B
+    {
+        let mut best = None;
+
+        while let Some(item) = self.next() {
+            let key = get_key(&item);
+            let replace = if let Some((_, ref best_key)) = best {
+                key > *best_key
+            } else {true};
+            if replace {
+                best = Some((item, key))
+            }
+        }
+
+        best.map(|(item, _)| item)
+    }
+
     fn enumerate(self) -> Enumerate<Self> {
         Enumerate { next: 0, base: self }
     }
@@ -60,6 +80,12 @@ pub trait Iter8or: Sized {
         where U: IntoIter8or<Item = Self::Item>
     {
         Chain(ChainImpl::Both(self, other.into_iter()))
+    }
+
+    fn zip<U>(self, other: U) -> Zip<Self, U::IntoIter>
+        where U: IntoIter8or
+    {
+        Zip { left: self, right: other.into_iter() }
     }
 }
 
@@ -288,5 +314,43 @@ impl<A, B> ExactSizeIter8or for Chain<A, B>
             ChainImpl::JustB(ref b) => b.len(),
             ChainImpl::Done => 0,
         }
+    }
+}
+
+pub struct Zip<A, B> {
+    left: A,
+    right: B,
+}
+
+impl<A, B> Iter8or for Zip<A, B>
+    where A: Iter8or, B: Iter8or
+{
+    type Item = (A::Item, B::Item);
+
+    fn next(&mut self) -> Option<<Self as Iter8or>::Item> {
+        match (self.left.next(), self.right.next()) {
+            (Some(a), Some(b)) => Some((a, b)),
+            _ => None,
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let (a_lower, a_upper_option) = self.left.size_hint();
+        let (b_lower, b_upper_option) = self.right.size_hint();
+
+        let lower = cmp::min(a_lower, b_lower);
+        let upper_option = a_upper_option.and_then(|a_upper|
+            b_upper_option.map(|b_upper| cmp::min(a_upper, b_upper)));
+
+        (lower, upper_option)
+    }
+}
+
+impl<A, B> ExactSizeIter8or for Zip<A, B>
+    where A: ExactSizeIter8or,
+          B: ExactSizeIter8or
+{
+    fn len(&self) -> usize {
+        cmp::min(self.left.len(), self.right.len())
     }
 }
