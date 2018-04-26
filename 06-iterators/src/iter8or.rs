@@ -87,6 +87,17 @@ pub trait Iter8or: Sized {
     {
         Zip { left: self, right: other.into_iter() }
     }
+
+    fn flat_map<F, U>(self, fun: F) -> FlatMap<Self, F, U>
+        where F: FnMut(Self::Item) -> U,
+              U: IntoIter8or
+    {
+        FlatMap {
+            base: self,
+            fun,
+            buf: None,
+        }
+    }
 }
 
 pub trait IntoIter8or {
@@ -354,3 +365,49 @@ impl<A, B> ExactSizeIter8or for Zip<A, B>
         cmp::min(self.left.len(), self.right.len())
     }
 }
+
+pub struct FlatMap<I, F, U: IntoIter8or> {
+    base: I,
+    fun: F,
+    buf: Option<U::IntoIter>
+}
+
+impl <I, F, U> Iter8or for FlatMap<I, F, U>
+    where I: Iter8or,
+          F: FnMut(I::Item) -> U,
+          U: IntoIter8or
+{
+    type Item = U::Item;
+
+    fn next(&mut self) -> Option<U::Item> {
+        loop {
+            match self.buf.take() {
+                None => {
+                    match self.base.next() {
+                        None => {
+                            return None;
+                        }
+                        Some(inner) => {
+                            self.buf = Some((self.fun)(inner).into_iter());
+                            continue;
+                        }
+                    }
+                }
+
+                Some(mut inner) => {
+                    match inner.next() {
+                        None => {
+                            self.buf = Some(inner);
+                            continue;
+                        }
+                        Some(item) => {
+                            self.buf = Some(inner);
+                            return Some(item);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
