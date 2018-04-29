@@ -57,6 +57,10 @@ pub trait Iter8or: Sized {
         }
     }
 
+    fn any<P: FnMut(Self::Item) -> bool>(self, pred: P) -> bool {
+        self.map(pred).filter(|&b| b).next().is_some()
+    }
+
     fn max_by_key<B, F>(mut self, mut get_key: F) -> Option<Self::Item>
         where B: Ord,
               F: FnMut(&Self::Item) -> B
@@ -100,6 +104,13 @@ pub trait Iter8or: Sized {
             base: self,
             fun,
             buf: None,
+        }
+    }
+
+    fn peekable(self) -> Peek<Self> {
+        Peek {
+            base: self,
+            next: None,
         }
     }
 }
@@ -424,3 +435,31 @@ impl <I, F, U> Iter8or for FlatMap<I, F, U>
     }
 }
 
+#[derive(Debug)]
+pub struct Peek<I: Iter8or> {
+    base: I,
+    next: Option<I::Item>,
+}
+
+impl<I: Iter8or> Peek<I> {
+    pub fn peek(&mut self) -> Option<&I::Item> {
+        if let Some(ref item) = self.next {
+            Some(item)
+        } else {
+            self.next = self.base.next();
+            self.next.as_ref()
+        }
+    }
+}
+
+impl<I: Iter8or> Iter8or for Peek<I> {
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<<Self as Iter8or>::Item> {
+        self.next.take().or_else(|| self.base.next())
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        unimplemented!()
+    }
+}

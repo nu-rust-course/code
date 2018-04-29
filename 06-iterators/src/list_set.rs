@@ -1,6 +1,6 @@
 //! Sets, represented as sorted, singly-linked lists.
 
-use super::*;
+use super::{Iter8or, IntoIter8or, FromIter8or, ExactSizeIter8or, Xtend};
 
 use std::cmp::Ordering::{self, Less, Equal, Greater};
 use std::default::Default;
@@ -98,19 +98,21 @@ impl<T> Set<T> {
     ///
     /// ```
     /// # use iterators::list_set::Set;
-    /// use iterators::FromIter8or;
+    /// use iterators::{Iter8or, FromIter8or};
     ///
     /// let set = Set::from_iter(vec![1, 3, 5]);
     /// let mut result = Vec::new();
     ///
-    /// for elt in set.iter() {
+    /// let mut iter = set.iter();
+    ///
+    /// while let Some(elt) = iter.next() {
     ///     result.push(elt);
     /// }
     ///
     /// assert_eq!( result, &[&1, &3, &5] );
     /// ```
     pub fn iter(&self) -> Iter<T> {
-        self.into_iter()
+        self.into_iter8or()
     }
 
     /// Returns an iterator that removes and returns elements satisfying a predicate, leaving the
@@ -333,13 +335,15 @@ impl<'a, T: 'a> CursorMut<'a, T> {
 ///
 /// ```
 /// # use iterators::list_set::Set;
+/// use iterators::{Iter8or, IntoIter8or};
+///
 /// let mut set = Set::new();
 ///
 /// set.insert(2);
 /// set.insert(4);
 /// set.insert(3);
 ///
-/// let mut iter = (&set).into_iter();
+/// let mut iter = (&set).into_iter8or();
 ///
 /// assert_eq!(Some(&2), iter.next());
 /// assert_eq!(Some(&3), iter.next());
@@ -352,7 +356,7 @@ pub struct Iter<'a, T: 'a> {
     len: usize,
 }
 
-impl<'a, T> Iterator for Iter<'a, T> {
+impl<'a, T> Iter8or for Iter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<&'a T> {
@@ -371,17 +375,17 @@ impl<'a, T> Iterator for Iter<'a, T> {
     }
 }
 
-impl<'a, T> ExactSizeIterator for Iter<'a, T> {
+impl<'a, T> ExactSizeIter8or for Iter<'a, T> {
     fn len(&self) -> usize {
         self.len
     }
 }
 
-impl<'a, T> IntoIterator for &'a Set<T> {
+impl<'a, T> IntoIter8or for &'a Set<T> {
     type Item = &'a T;
     type IntoIter = Iter<'a, T>;
 
-    fn into_iter(self) -> Iter<'a, T> {
+    fn into_iter8or(self) -> Iter<'a, T> {
         Iter {
             link: &self.head,
             len: self.len,
@@ -395,13 +399,15 @@ impl<'a, T> IntoIterator for &'a Set<T> {
 ///
 /// ```
 /// # use iterators::list_set::Set;
+/// use iterators::{Iter8or, IntoIter8or};
+///
 /// let mut set = Set::new();
 ///
 /// set.insert(2);
 /// set.insert(4);
 /// set.insert(3);
 ///
-/// let mut iter = set.into_iter();
+/// let mut iter = set.into_iter8or();
 ///
 /// assert_eq!(Some(2), iter.next());
 /// assert_eq!(Some(3), iter.next());
@@ -411,7 +417,7 @@ impl<'a, T> IntoIterator for &'a Set<T> {
 #[derive(Debug)]
 pub struct IntoIter<T>(Set<T>);
 
-impl<T> Iterator for IntoIter<T> {
+impl<T> Iter8or for IntoIter<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<T> {
@@ -428,25 +434,23 @@ impl<T> Iterator for IntoIter<T> {
     }
 }
 
-impl<T> ExactSizeIterator for IntoIter<T> {
+impl<T> ExactSizeIter8or for IntoIter<T> {
     fn len(&self) -> usize {
         self.0.len
     }
 }
 
-impl<T> IntoIterator for Set<T> {
+impl<T> IntoIter8or for Set<T> {
     type Item = T;
     type IntoIter = IntoIter<T>;
 
-    fn into_iter(self) -> IntoIter<T> {
+    fn into_iter8or(self) -> IntoIter<T> {
         IntoIter(self)
     }
 }
 
 impl<T: Ord> Xtend<T> for Set<T> {
-    fn xtend<I: IntoIter8or<Item=T>>(&mut self, pre_iter: I)
-        where I::IntoIter: Iter8or<Item=T>
-    {
+    fn xtend<I: IntoIter8or<Item=T>>(&mut self, pre_iter: I) {
         let mut iter = pre_iter.into_iter8or();
         while let Some(elem) = iter.next() {
             self.insert(elem);
@@ -464,8 +468,8 @@ impl<T: Ord> FromIter8or<T> for Set<T> {
 
 impl<T: Ord> Ord for Set<T> {
     fn cmp(&self, other: &Set<T>) -> Ordering {
-        let mut i = self.into_iter();
-        let mut j = other.into_iter();
+        let mut i = self.into_iter8or();
+        let mut j = other.into_iter8or();
 
         loop {
             match (i.next(), j.next()) {
@@ -501,9 +505,10 @@ impl<T: Clone> Clone for Set<T> {
         let mut result = Set::new();
 
         {
-            let mut cur = CursorMut::new(&mut result);
+            let mut cur  = CursorMut::new(&mut result);
+            let mut iter = self.into_iter8or();
 
-            for each in self {
+            while let Some(each) = iter.next() {
                 cur.insert(each.clone());
                 cur.advance();
             }
@@ -627,8 +632,8 @@ impl<T: Ord + Clone> Set<T> {
         {
             let mut cur = CursorMut::new(&mut result);
 
-            let mut i = self.into_iter().peekable();
-            let mut j = other.into_iter().peekable();
+            let mut i = self.into_iter8or().peekable();
+            let mut j = other.into_iter8or().peekable();
 
             while let (Some(&a), Some(&b)) = (i.peek(), j.peek()) {
                 match a.cmp(b) {
@@ -673,8 +678,8 @@ impl<T: Ord + Clone> Set<T> {
         {
             let mut cur = CursorMut::new(&mut result);
 
-            let mut i = self.into_iter().peekable();
-            let mut j = other.into_iter().peekable();
+            let mut i = self.into_iter8or().peekable();
+            let mut j = other.into_iter8or().peekable();
 
             while let (Some(&a), Some(&b)) = (i.peek(), j.peek()) {
                 match a.cmp(b) {
@@ -697,12 +702,12 @@ impl<T: Ord + Clone> Set<T> {
                 }
             }
 
-            for a in i {
+            while let Some(a) = i.next() {
                 cur.insert(a.clone());
                 cur.advance();
             }
 
-            for b in j {
+            while let Some(b) = j.next() {
                 cur.insert(b.clone());
                 cur.advance();
             }
@@ -734,8 +739,8 @@ impl<T: Ord + Clone> Set<T> {
         {
             let mut cur = CursorMut::new(&mut result);
 
-            let mut i = self.into_iter().peekable();
-            let mut j = other.into_iter().peekable();
+            let mut i = self.into_iter8or().peekable();
+            let mut j = other.into_iter8or().peekable();
 
             while let (Some(&a), Some(&b)) = (i.peek(), j.peek()) {
                 match a.cmp(b) {
@@ -754,7 +759,7 @@ impl<T: Ord + Clone> Set<T> {
                 }
             }
 
-            for a in i {
+            while let Some(a) = i.next() {
                 cur.insert(a.clone());
                 cur.advance();
             }
@@ -785,8 +790,8 @@ impl<T: Ord + Clone> Set<T> {
         {
             let mut cur = CursorMut::new(&mut result);
 
-            let mut i = self.into_iter().peekable();
-            let mut j = other.into_iter().peekable();
+            let mut i = self.into_iter8or().peekable();
+            let mut j = other.into_iter8or().peekable();
 
             while let (Some(&a), Some(&b)) = (i.peek(), j.peek()) {
                 match a.cmp(b) {
@@ -807,12 +812,12 @@ impl<T: Ord + Clone> Set<T> {
                 }
             }
 
-            for a in i {
+            while let Some(a) = i.next() {
                 cur.insert(a.clone());
                 cur.advance();
             }
 
-            for b in j {
+            while let Some(b) = j.next() {
                 cur.insert(b.clone());
                 cur.advance();
             }
@@ -831,7 +836,7 @@ pub struct DrainFilter<'a, T: 'a, P>
     len: usize,
 }
 
-impl<'a, T, P> Iterator for DrainFilter<'a, T, P>
+impl<'a, T, P> Iter8or for DrainFilter<'a, T, P>
     where P: FnMut(&T) -> bool
 {
     type Item = T;
@@ -858,7 +863,7 @@ impl<'a, T, P> Drop for DrainFilter<'a, T, P>
     where P: FnMut(&T) -> bool
 {
     fn drop(&mut self) {
-        for _ in self {}
+        while let Some(_) = self.next() {}
     }
 }
 
@@ -872,7 +877,7 @@ mod random_tests {
             let set = v2s(&vec);
 
             for elem in elems {
-                let in_v = (&vec).into_iter().any(|x| *x == elem);
+                let in_v = (&vec).into_iter8or().any(|x| *x == elem);
                 if set.contains(&elem) != in_v {
                     return false;
                 }
@@ -898,7 +903,8 @@ mod random_tests {
                 }
             }
 
-            for &elem in &s3 {
+            let mut s3i = s3.iter();
+            while let Some(&elem) = s3i.next() {
                 if !s1.contains(&elem) || !s2.contains(&elem) {
                     return false;
                 }
@@ -924,7 +930,8 @@ mod random_tests {
                 }
             }
 
-            for &elem in &s3 {
+            let mut s3i = s3.iter();
+            while let Some(&elem) = s3i.next() {
                 if !s1.contains(&elem) && !s2.contains(&elem) {
                     return false;
                 }
