@@ -83,13 +83,13 @@ pub trait Iter8or: Sized {
     fn chain<U>(self, other: U) -> Chain<Self, U::IntoIter>
         where U: IntoIter8or<Item = Self::Item>
     {
-        Chain(ChainImpl::Both(self, other.into_iter()))
+        Chain(ChainImpl::Both(self, other.into_iter8or()))
     }
 
     fn zip<U>(self, other: U) -> Zip<Self, U::IntoIter>
         where U: IntoIter8or
     {
-        Zip { left: self, right: other.into_iter() }
+        Zip { left: self, right: other.into_iter8or() }
     }
 
     fn flat_map<F, U>(self, fun: F) -> FlatMap<Self, F, U>
@@ -108,12 +108,16 @@ pub trait IntoIter8or {
     type Item;
     type IntoIter: Iter8or<Item = Self::Item>;
 
-    fn into_iter(self) -> Self::IntoIter;
+    fn into_iter8or(self) -> Self::IntoIter;
 }
 
 pub trait FromIter8or<T> {
     fn from_iter<I>(iter: I) -> Self
         where I: IntoIter8or<Item = T>;
+}
+
+pub trait Xtend<T> {
+    fn xtend<I: IntoIter8or<Item=T>>(&mut self, iter: I);
 }
 
 pub trait ExactSizeIter8or : Iter8or {
@@ -134,7 +138,7 @@ impl<T: Iter8or> IntoIter8or for T {
     type Item = T::Item;
     type IntoIter = T;
 
-    fn into_iter(self) -> <Self as IntoIter8or>::IntoIter {
+    fn into_iter8or(self) -> <Self as IntoIter8or>::IntoIter {
         self
     }
 }
@@ -397,7 +401,7 @@ impl <I, F, U> Iter8or for FlatMap<I, F, U>
                             return None;
                         }
                         Some(inner) => {
-                            self.buf = Some((self.fun)(inner).into_iter());
+                            self.buf = Some((self.fun)(inner).into_iter8or());
                             continue;
                         }
                     }

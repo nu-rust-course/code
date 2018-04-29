@@ -7,3 +7,5 @@ pub mod vec;
 pub mod words_from_chars;
 pub mod words_from_read;
 pub mod list_set;
+
+pub use iter8or::*;

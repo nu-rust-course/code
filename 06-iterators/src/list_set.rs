@@ -1,8 +1,9 @@
 //! Sets, represented as sorted, singly-linked lists.
 
+use super::*;
+
 use std::cmp::Ordering::{self, Less, Equal, Greater};
 use std::default::Default;
-use std::iter::{Extend, FromIterator};
 use std::mem;
 
 /// A set of elements of type `T`.
@@ -97,7 +98,7 @@ impl<T> Set<T> {
     ///
     /// ```
     /// # use iterators::list_set::Set;
-    /// use std::iter::FromIterator;
+    /// use iterators::FromIter8or;
     ///
     /// let set = Set::from_iter(vec![1, 3, 5]);
     /// let mut result = Vec::new();
@@ -137,7 +138,7 @@ impl<T: Ord> Set<T> {
     ///
     /// ```
     /// # use iterators::list_set::Set;
-    /// use std::iter::FromIterator;
+    /// use iterators::FromIter8or;
     ///
     /// let set = Set::from_iter(vec![3, 5, 4]);
     ///
@@ -442,18 +443,21 @@ impl<T> IntoIterator for Set<T> {
     }
 }
 
-impl<T: Ord> Extend<T> for Set<T> {
-    fn extend<I: IntoIterator<Item=T>>(&mut self, iter: I) {
-        for elem in iter {
+impl<T: Ord> Xtend<T> for Set<T> {
+    fn xtend<I: IntoIter8or<Item=T>>(&mut self, pre_iter: I)
+        where I::IntoIter: Iter8or<Item=T>
+    {
+        let mut iter = pre_iter.into_iter8or();
+        while let Some(elem) = iter.next() {
             self.insert(elem);
         }
     }
 }
 
-impl<T: Ord> FromIterator<T> for Set<T> {
-    fn from_iter<I: IntoIterator<Item=T>>(iter: I) -> Self {
+impl<T: Ord> FromIter8or<T> for Set<T> {
+    fn from_iter<I: IntoIter8or<Item=T>>(iter: I) -> Self {
         let mut result = Set::new();
-        result.extend(iter);
+        result.xtend(iter);
         result
     }
 }
@@ -511,7 +515,7 @@ impl<T: Clone> Clone for Set<T> {
 
 #[test]
 fn test_clone() {
-    let set1: Set<usize> = vec![3, 5, 4].into_iter().collect();
+    let set1: Set<usize> = vec![3, 5, 4].into_iter8or().collect();
     let set2 = set1.clone();
     assert_eq!(set2, set1);
 }
@@ -523,7 +527,7 @@ impl<T: Ord> Set<T> {
     ///
     /// ```
     /// # use iterators::list_set::Set;
-    /// use std::iter::FromIterator;
+    /// use iterators::FromIter8or;
     ///
     /// let set1 = Set::from_iter(vec![1, 2]);
     /// let set2 = Set::from_iter(vec![3, 4]);
@@ -560,7 +564,7 @@ impl<T: Ord> Set<T> {
     ///
     /// ```
     /// # use iterators::list_set::Set;
-    /// use std::iter::FromIterator;
+    /// use iterators::FromIter8or;
     ///
     /// let set1 = Set::from_iter(vec![2]);
     /// let set2 = Set::from_iter(vec![1, 2, 3]);
@@ -607,7 +611,7 @@ impl<T: Ord + Clone> Set<T> {
     ///
     /// ```
     /// # use iterators::list_set::Set;
-    /// use std::iter::FromIterator;
+    /// use iterators::FromIter8or;
     ///
     /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
     /// let set2 = Set::from_iter(vec![1, 2, 3, 4]);
@@ -653,7 +657,7 @@ impl<T: Ord + Clone> Set<T> {
     ///
     /// ```
     /// # use iterators::list_set::Set;
-    /// use std::iter::FromIterator;
+    /// use iterators::FromIter8or;
     ///
     /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
     /// let set2 = Set::from_iter(vec![1, 2, 3, 4]);
@@ -713,7 +717,7 @@ impl<T: Ord + Clone> Set<T> {
     ///
     /// ```
     /// # use iterators::list_set::Set;
-    /// use std::iter::FromIterator;
+    /// use iterators::FromIter8or;
     ///
     /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
     /// let set2 = Set::from_iter(vec![1, 2, 3, 4]);
@@ -765,7 +769,7 @@ impl<T: Ord + Clone> Set<T> {
     ///
     /// ```
     /// # use iterators::list_set::Set;
-    /// use std::iter::FromIterator;
+    /// use iterators::FromIter8or;
     ///
     /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
     /// let set2 = Set::from_iter(vec![1, 2, 3, 4]);
@@ -861,6 +865,7 @@ impl<'a, T, P> Drop for DrainFilter<'a, T, P>
 #[cfg(test)]
 mod random_tests {
     use super::Set;
+    use iter8or::{IntoIter8or, FromIter8or, Iter8or};
 
     quickcheck! {
         fn prop_member(vec: Vec<usize>, elems: Vec<usize>) -> bool {
@@ -930,6 +935,6 @@ mod random_tests {
     }
 
     fn v2s<T: Clone + Ord>(vec: &Vec<T>) -> Set<T> {
-        ::std::iter::FromIterator::from_iter(vec.clone())
+        FromIter8or::from_iter(vec.into_iter8or().map(Clone::clone))
     }
 }
