@@ -53,7 +53,7 @@
  *    to print, so we will print an explanatory message instead.
  */
 
-use std::io::{BufRead, BufReader, Read, stdin, Write, stdout};
+use std::io::{self, BufRead, BufReader, Read, stdin, Write, stdout};
 
 fn main() {
     // Writing the whole program as a function that reads from a `Read`
@@ -70,7 +70,7 @@ fn main() {
 // possible for every program, but when it is then it's pretty nice.
 fn transform<R: Read, W: Write>(input: R, output: W) {
     let measurements = read_measurements(input);
-    write_output(output, calculate_results(&measurements));
+    write_output(output, calculate_results(&measurements)).unwrap();
 }
 
 #[cfg(test)]
@@ -220,13 +220,13 @@ mod sum_tests {
 }
 
 // Writes the results to the given output stream.
-fn write_output<W: Write>(mut writer: W, r: Results) {
+fn write_output<W: Write>(mut writer: W, r: Results) -> io::Result<()> {
   if r.mean.is_nan() {
-      write!(writer, "No measurements provided.\n").unwrap();
+      write!(writer, "No measurements provided.\n")
   } else {
-      write!(writer, "Mean rainfall: {} cm\n", r.mean).unwrap();
-      write!(writer, "Below count:   {}\n", r.below).unwrap();
-      write!(writer, "Above count:   {}\n", r.above).unwrap();
+      write!(writer, "Mean rainfall: {} cm\n", r.mean)?;
+      write!(writer, "Below count:   {}\n", r.below)?;
+      write!(writer, "Above count:   {}\n", r.above)
   }
 }
 
@@ -251,7 +251,7 @@ mod write_output_tests {
     // Asserts that `results` when written produces `expected`.
     fn assert_write(expected: &str, results: Results) {
         let mut writer = Vec::new();
-        write_output(&mut writer, results);
+        write_output(&mut writer, results).unwrap();
         assert_eq!(expected, String::from_utf8(writer).unwrap());
         // consider the previous line versus:
         // assert_eq!(expected.as_bytes(), &*writer.into_inner());
