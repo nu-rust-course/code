@@ -8,7 +8,7 @@ pub struct Words<R, IsWordChar> {
     pred:  IsWordChar,
 }
 
-impl<R: io::BufRead, IsWordChar> Words<R, IsWordChar> {
+impl<R: io::BufRead, IsWordChar: Fn(char) -> bool> Words<R, IsWordChar> {
     pub fn new(input: R, pred: IsWordChar) -> Self {
         Words {
             lines: input.lines(),
