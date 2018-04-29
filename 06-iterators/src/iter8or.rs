@@ -39,6 +39,10 @@ pub trait Iter8or: Sized {
         self.next()
     }
 
+    fn collect<T: FromIter8or<Self::Item>>(self) -> T {
+        T::from_iter(self)
+    }
+
     fn map<B, F: FnMut(Self::Item) -> B>(self, fun: F) -> Map<Self, F> {
         Map {
             base: self,
@@ -105,6 +109,11 @@ pub trait IntoIter8or {
     type IntoIter: Iter8or<Item = Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter;
+}
+
+pub trait FromIter8or<T> {
+    fn from_iter<I>(iter: I) -> Self
+        where I: IntoIter8or<Item = T>;
 }
 
 pub trait ExactSizeIter8or : Iter8or {

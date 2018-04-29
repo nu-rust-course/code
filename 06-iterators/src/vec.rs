@@ -1,4 +1,4 @@
-use std::mem;
+use std::{cmp, mem};
 use super::iter8or::*;
 
 /// First, a Vector iterator. We're make a read-only, by-reference
@@ -30,6 +30,27 @@ impl<'a, T> Iter8or for VecIter<'a, T> {
 impl<'a, T> ExactSizeIter8or for VecIter<'a, T> {
     fn len(&self) -> usize {
         self.base.len() - self.pos
+    }
+}
+
+impl<T> FromIter8or<T> for Vec<T> {
+    fn from_iter<I: IntoIter8or<Item = T>>(pre_iter: I) -> Self {
+        let mut iter = pre_iter.into_iter();
+
+        let mut result = {
+            let (lower, upper_option) = iter.size_hint();
+            let capacity = match upper_option {
+                Some(upper) => cmp::min(2 * lower, upper),
+                None => lower,
+            };
+            Vec::with_capacity(capacity)
+        };
+
+        while let Some(item) = iter.next() {
+            result.push(item)
+        }
+
+        result
     }
 }
 

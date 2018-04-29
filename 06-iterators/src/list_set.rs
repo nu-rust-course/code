@@ -10,7 +10,7 @@ use std::mem;
 /// # Example
 ///
 /// ```
-/// use ownership::list_set::Set;
+/// use iterators::list_set::Set;
 ///
 /// let mut set = Set::new();
 ///
@@ -42,7 +42,7 @@ impl<T> Set<T> {
     /// # Example
     ///
     /// ```
-    /// # use ownership::list_set::Set;
+    /// # use iterators::list_set::Set;
     /// let mut set = Set::new();
     /// set.insert("hello");
     /// ```
@@ -58,7 +58,7 @@ impl<T> Set<T> {
     /// # Example
     ///
     /// ```
-    /// # use ownership::list_set::Set;
+    /// # use iterators::list_set::Set;
     /// let mut set = Set::new();
     /// assert!(set.is_empty());
     ///
@@ -74,7 +74,7 @@ impl<T> Set<T> {
     /// # Example
     ///
     /// ```
-    /// # use ownership::list_set::Set;
+    /// # use iterators::list_set::Set;
     /// let mut set = Set::new();
     /// assert_eq!(0, set.len());
     ///
@@ -96,7 +96,7 @@ impl<T> Set<T> {
     /// # Example
     ///
     /// ```
-    /// # use ownership::list_set::Set;
+    /// # use iterators::list_set::Set;
     /// use std::iter::FromIterator;
     ///
     /// let set = Set::from_iter(vec![1, 3, 5]);
@@ -136,7 +136,7 @@ impl<T: Ord> Set<T> {
     /// # Example
     ///
     /// ```
-    /// # use ownership::list_set::Set;
+    /// # use iterators::list_set::Set;
     /// use std::iter::FromIterator;
     ///
     /// let set = Set::from_iter(vec![3, 5, 4]);
@@ -169,7 +169,7 @@ impl<T: Ord> Set<T> {
     /// # Example
     ///
     /// ```
-    /// # use ownership::list_set::Set;
+    /// # use iterators::list_set::Set;
     /// let mut set = Set::new();
     /// set.insert(3);
     /// set.insert(5);
@@ -205,7 +205,7 @@ impl<T: Ord> Set<T> {
     /// # Example
     ///
     /// ```
-    /// # use ownership::list_set::Set;
+    /// # use iterators::list_set::Set;
     /// let mut set = Set::new();
     ///
     /// assert_eq!(None, set.replace(5));
@@ -238,7 +238,7 @@ impl<T: Ord> Set<T> {
     /// # Example
     ///
     /// ```
-    /// # use ownership::list_set::Set;
+    /// # use iterators::list_set::Set;
     /// let mut set = Set::new();
     ///
     /// assert_eq!(false,   set.contains(&5));
@@ -331,7 +331,7 @@ impl<'a, T: 'a> CursorMut<'a, T> {
 /// # Example
 ///
 /// ```
-/// # use ownership::list_set::Set;
+/// # use iterators::list_set::Set;
 /// let mut set = Set::new();
 ///
 /// set.insert(2);
@@ -393,7 +393,7 @@ impl<'a, T> IntoIterator for &'a Set<T> {
 /// # Example
 ///
 /// ```
-/// # use ownership::list_set::Set;
+/// # use iterators::list_set::Set;
 /// let mut set = Set::new();
 ///
 /// set.insert(2);
@@ -522,7 +522,7 @@ impl<T: Ord> Set<T> {
     /// # Example
     ///
     /// ```
-    /// # use ownership::list_set::Set;
+    /// # use iterators::list_set::Set;
     /// use std::iter::FromIterator;
     ///
     /// let set1 = Set::from_iter(vec![1, 2]);
@@ -559,7 +559,7 @@ impl<T: Ord> Set<T> {
     /// # Example
     ///
     /// ```
-    /// # use ownership::list_set::Set;
+    /// # use iterators::list_set::Set;
     /// use std::iter::FromIterator;
     ///
     /// let set1 = Set::from_iter(vec![2]);
@@ -606,7 +606,7 @@ impl<T: Ord + Clone> Set<T> {
     /// # Example
     ///
     /// ```
-    /// # use ownership::list_set::Set;
+    /// # use iterators::list_set::Set;
     /// use std::iter::FromIterator;
     ///
     /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
@@ -652,7 +652,7 @@ impl<T: Ord + Clone> Set<T> {
     /// # Example
     ///
     /// ```
-    /// # use ownership::list_set::Set;
+    /// # use iterators::list_set::Set;
     /// use std::iter::FromIterator;
     ///
     /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
@@ -712,7 +712,7 @@ impl<T: Ord + Clone> Set<T> {
     /// # Example
     ///
     /// ```
-    /// # use ownership::list_set::Set;
+    /// # use iterators::list_set::Set;
     /// use std::iter::FromIterator;
     ///
     /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
@@ -764,7 +764,7 @@ impl<T: Ord + Clone> Set<T> {
     /// # Example
     ///
     /// ```
-    /// # use ownership::list_set::Set;
+    /// # use iterators::list_set::Set;
     /// use std::iter::FromIterator;
     ///
     /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);

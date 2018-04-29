@@ -1,6 +1,6 @@
-//#[cfg(test)]
-//#[macro_use]
-//extern crate quickcheck;
+#[cfg(test)]
+#[macro_use]
+extern crate quickcheck;
 
 pub mod iter8or;
 pub mod vec;

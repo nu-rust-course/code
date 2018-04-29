@@ -3,5 +3,5 @@ name = "iterators"
 version = "0.1.0"
 authors = ["Jesse A. Tov <jesse.tov@gmail.com>"]
 
-#[dev-dependencies]
-#quickcheck = "0.4"
+[dev-dependencies]
+quickcheck = "0.4"
