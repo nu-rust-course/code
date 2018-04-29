@@ -1,5 +1,3 @@
-use super::Iter8or;
-
 /// We can make an iterator over words, given an iterator over
 /// characters. We also abstract it over the predicate on characters
 /// that determines what characters should be included in a word.
@@ -8,13 +6,19 @@ pub struct Words<Chars, IsWordChar> {
     pred: IsWordChar,
 }
 
-impl<Chars, IsWordChar> Words<Chars, IsWordChar> {
-    pub fn new(base: Chars, pred: IsWordChar) -> Self {
-        Words { base, pred }
+impl<Chars, IsWordChar> Words<Chars, IsWordChar>
+    where Chars: IntoIterator<Item=char>,
+          IsWordChar: Fn(char) -> bool
+{
+    pub fn new(base: Chars, pred: IsWordChar) -> Words<Chars::IntoIter, IsWordChar> {
+        Words {
+            base: base.into_iter(),
+            pred
+        }
     }
 }
 
-impl<Chars, IsWordChar> Iter8or for Words<Chars, IsWordChar>
+impl<Chars, IsWordChar> Iterator for Words<Chars, IsWordChar>
     where Chars: Iterator<Item=char>,
           IsWordChar: Fn(char) -> bool
 {

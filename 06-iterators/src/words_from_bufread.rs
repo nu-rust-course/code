@@ -50,7 +50,7 @@ pub fn is_word_char(c: char) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::iter8or::Iter8or;
+    use super::Iter8or;
 
     #[test]
     fn hello_world() {
@@ -71,7 +71,7 @@ mod tests {
         let actual_words: Vec<String> =
             Words::new(input.as_bytes(), is_word_char).map(Result::unwrap).collect();
         let expected_words: Vec<String> =
-            expected_words.into_iter().map(ToOwned::to_owned).collect();
+            expected_words.into_iter().map(|&s| s.to_owned()).collect();
         assert_eq!( actual_words, expected_words );
     }
 }
