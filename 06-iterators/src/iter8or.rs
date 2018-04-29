@@ -460,6 +460,14 @@ impl<I: Iter8or> Iter8or for Peek<I> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        unimplemented!()
+        let extra = if self.next.is_some() {1} else {0};
+        let (low, option_high) = self.base.size_hint();
+        (low + extra, option_high.map(|high| high + extra))
+    }
+}
+
+impl<I: ExactSizeIter8or> ExactSizeIter8or for Peek<I> {
+    fn len(&self) -> usize {
+        self.base.len() + if self.next.is_some() {1} else {0}
     }
 }
