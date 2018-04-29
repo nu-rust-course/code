@@ -859,6 +859,8 @@ impl<'a, T, P> Iter8or for DrainFilter<'a, T, P>
     }
 }
 
+// This ensures the post-condition of `drop_filter` that all satisfying
+// elements are removed.
 impl<'a, T, P> Drop for DrainFilter<'a, T, P>
     where P: FnMut(&T) -> bool
 {
