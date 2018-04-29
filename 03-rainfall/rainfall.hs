@@ -6,8 +6,8 @@ import Data.List
 main = getContents >>= display . compute . clean . parse
 
 parse = concatMap (winnow . reads) . lines where
-    winnow [(d, "")] = [d]
-    winnow _         = []
+  winnow [(d, "")] = [d]
+  winnow _         = []
 
 clean = filter (>= 0) . takeWhile (/= 999)
 
