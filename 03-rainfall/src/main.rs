@@ -56,6 +56,10 @@
 use std::io::{BufRead, BufReader, Read, stdin, Write, stdout};
 
 fn main() {
+    // Writing the whole program as a function that reads from a `Read`
+    // and writes to `Write` is a bit weird, but when we can do it as
+    // in this case, it lets us test the whole program from within
+    // Rust's unit testing framework.
     transform(stdin(), stdout());
 }
 
