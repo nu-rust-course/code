@@ -125,7 +125,6 @@ fn read_measurements<R: Read>(reader: R) -> Vec<f64> {
 #[cfg(test)]
 mod read_measurements_tests {
     use super::read_measurements;
-    use std::io::Cursor;
 
     #[test]
     fn reads_three_measurements() {
@@ -149,8 +148,7 @@ mod read_measurements_tests {
 
     // Asserts that reading from `input` yields `expected`.
     fn assert_read(expected: &[f64], input: &str) {
-        let mock_read = Cursor::new(input);
-        let measurements = read_measurements(mock_read);
+        let measurements = read_measurements(input.as_bytes());
         assert_eq!(expected, measurements.as_slice());
     }
 }
