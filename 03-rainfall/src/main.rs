@@ -222,11 +222,11 @@ mod sum_tests {
 // Writes the results to the given output stream.
 fn write_output<W: Write>(mut writer: W, r: Results) -> io::Result<()> {
   if r.mean.is_nan() {
-      write!(writer, "No measurements provided.\n")
+      writeln!(writer, "No measurements provided.")
   } else {
-      write!(writer, "Mean rainfall: {} cm\n", r.mean)?;
-      write!(writer, "Below count:   {}\n", r.below)?;
-      write!(writer, "Above count:   {}\n", r.above)
+      writeln!(writer, "Mean rainfall: {} cm", r.mean)?;
+      writeln!(writer, "Below count:   {}", r.below)?;
+      writeln!(writer, "Above count:   {}", r.above)
   }
 }
 
@@ -237,15 +237,16 @@ mod write_output_tests {
     #[test]
     fn no_measurements_output() {
         use std::f64::NAN;
-        assert_write("No measurements provided.\n",
-                     Results { mean:  NAN, above: 0, below: 0 });
+        assert_write(
+            "No measurements provided.\n",
+            Results { mean: NAN, above: 0, below: 0 });
     }
 
     #[test]
     fn some_measurements_output() {
         assert_write(
             "Mean rainfall: 5 cm\nBelow count:   3\nAbove count:   2\n",
-            Results { mean:  5., above: 2, below: 3 });
+            Results { mean: 5., above: 2, below: 3 });
     }
 
     // Asserts that `results` when written produces `expected`.
