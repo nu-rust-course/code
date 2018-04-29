@@ -234,7 +234,6 @@ fn write_output<W: Write>(mut writer: W, r: &Results) {
 #[cfg(test)]
 mod write_output_tests {
     use super::{write_output, Results};
-    use std::io::Cursor;
 
     #[test]
     fn no_measurements_output() {
@@ -252,9 +251,9 @@ mod write_output_tests {
 
     // Asserts that `results` when written produces `expected`.
     fn assert_write(expected: &str, results: &Results) {
-        let mut writer = Cursor::new(vec![]);
+        let mut writer = Vec::new();
         write_output(&mut writer, results);
-        assert_eq!(expected, String::from_utf8(writer.into_inner()).unwrap());
+        assert_eq!(expected, String::from_utf8(writer).unwrap());
         // consider the previous line versus:
         // assert_eq!(expected.as_bytes(), &*writer.into_inner());
     }
