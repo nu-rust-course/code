@@ -4,15 +4,15 @@ use super::vec::VecIntoIter;
 use std::io;
 
 pub struct Words<R, IsWordChar> {
-    lines: io::Lines<io::BufReader<R>>,
+    lines: io::Lines<R>,
     words: VecIntoIter<String>,
     pred:  IsWordChar,
 }
 
-impl<R: io::Read, IsWordChar> Words<R, IsWordChar> {
+impl<R: io::BufRead, IsWordChar> Words<R, IsWordChar> {
     pub fn new(input: R, pred: IsWordChar) -> Self {
         Words {
-            lines: io::BufRead::lines(io::BufReader::new(input)),
+            lines: input.lines(),
             words: Vec::new().into_iter8or(),
             pred
         }
@@ -20,7 +20,7 @@ impl<R: io::Read, IsWordChar> Words<R, IsWordChar> {
 }
 
 impl<R, IsWordChar> Iter8or for Words<R, IsWordChar>
-    where R: io::Read,
+    where R: io::BufRead,
           IsWordChar: Fn(char) -> bool
 {
     type Item = io::Result<String>;
@@ -72,7 +72,7 @@ mod tests {
         let actual_words: Vec<String> =
             Words::new(input.as_bytes(), is_word_char).map(Result::unwrap).collect();
         let expected_words: Vec<String> =
-            expected_words.into_iter().map(|&s| s.to_owned()).collect();
+            expected_words.into_iter().map(ToOwned::to_owned).collect();
         assert_eq!( actual_words, expected_words );
     }
 }
