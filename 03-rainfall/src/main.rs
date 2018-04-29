@@ -70,13 +70,12 @@ fn main() {
 // possible for every program, but when it is then it's pretty nice.
 fn transform<R: Read, W: Write>(input: R, output: W) {
     let measurements = read_measurements(input);
-    write_output(output, &calculate_results(&measurements));
+    write_output(output, calculate_results(&measurements));
 }
 
 #[cfg(test)]
 mod transform_tests {
     use super::transform;
-    use std::io::Cursor;
 
     #[test]
     fn no_input() {
@@ -98,14 +97,14 @@ mod transform_tests {
     }
 
     fn assert_transform(input: &str, expected_output: &str) {
-        let input = Cursor::new(input);
         let mut output = Vec::new();
-        transform(input, &mut output);
+        transform(input.as_bytes(), &mut output);
         let output_string = String::from_utf8(output).unwrap();
         assert_eq!( output_string, expected_output );
     }
 }
 
+#[derive(Copy, Clone, Debug)]
 struct Results {
     mean:  f64,
     above: usize,
@@ -221,7 +220,7 @@ mod sum_tests {
 }
 
 // Writes the results to the given output stream.
-fn write_output<W: Write>(mut writer: W, r: &Results) {
+fn write_output<W: Write>(mut writer: W, r: Results) {
   if r.mean.is_nan() {
       write!(writer, "No measurements provided.\n").unwrap();
   } else {
@@ -239,18 +238,18 @@ mod write_output_tests {
     fn no_measurements_output() {
         use std::f64::NAN;
         assert_write("No measurements provided.\n",
-                     &Results { mean:  NAN, above: 0, below: 0 });
+                     Results { mean:  NAN, above: 0, below: 0 });
     }
 
     #[test]
     fn some_measurements_output() {
         assert_write(
             "Mean rainfall: 5 cm\nBelow count:   3\nAbove count:   2\n",
-            &Results { mean:  5., above: 2, below: 3 });
+            Results { mean:  5., above: 2, below: 3 });
     }
 
     // Asserts that `results` when written produces `expected`.
-    fn assert_write(expected: &str, results: &Results) {
+    fn assert_write(expected: &str, results: Results) {
         let mut writer = Vec::new();
         write_output(&mut writer, results);
         assert_eq!(expected, String::from_utf8(writer).unwrap());
