@@ -104,7 +104,7 @@ mod transform_tests {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 struct Results {
     mean:  f64,
     above: usize,
@@ -167,15 +167,13 @@ fn calculate_results(fs: &[f64]) -> Results {
 
 #[cfg(test)]
 mod calculate_results_tests {
-    use super::calculate_results;
+    use super::{calculate_results, Results};
 
     #[test]
     fn given_example() {
-        let samples = [12.5, 18., 7., 0., 4.];
-        let result = calculate_results(&samples);
-        assert_eq!(8.3, result.mean);
-        assert_eq!(1, result.above);
-        assert_eq!(2, result.below);
+        let samples  = &[12.5, 18., 7., 0., 4.];
+        let expected = Results { mean: 8.3, above: 1, below: 2 };
+        assert_eq!( expected, calculate_results(samples) );
     }
 }
 
