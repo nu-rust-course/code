@@ -19,7 +19,7 @@ compute samples = (μ, below, above) where
 
 display (μ, below, above)
   | isNaN μ   = putStr "No measurements given.\n"
-  | otherwise = putStr $ "Mean rainfall: " ++ show μ ++ "\n" ++
+  | otherwise = putStr $ "Mean rainfall: " ++ show μ ++ " cm\n" ++
                          "Below count:   " ++ show below ++ "\n" ++
                          "Above count:   " ++ show above ++ "\n"
 
