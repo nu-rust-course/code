@@ -1,5 +1,4 @@
-use super::*;
-use super::vec::VecIntoIter;
+use super::{Iter8or, IntoIter8or, vec::VecIntoIter};
 
 use std::io;
 
