@@ -115,9 +115,11 @@ struct Results {
 // Reads the measurements from an input stream, cleaning and returning them.
 fn read_measurements<R: Read>(reader: R) -> Vec<f64> {
     let mut measurements: Vec<f64> = vec![]; // Vec::new()
-    let mut lines = BufReader::new(reader).lines();
+    let lines = BufReader::new(reader).lines();
 
-    while let Some(Ok(line)) = lines.next() {
+    for line_result in lines {
+        let line = line_result.expect("Could not read measurement");
+
         if line == "999" {break}
 
         if let Ok(f) = line.parse() {
