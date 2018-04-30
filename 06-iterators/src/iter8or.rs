@@ -96,6 +96,12 @@ pub trait Iter8or: Sized {
         Zip { left: self, right: other.into_iter8or() }
     }
 
+    fn filter_map<F, B>(self, fun: F) -> FilterMap<Self, F>
+        where F: FnMut(Self::Item) -> Option<B>
+    {
+        FilterMap { base: self, fun }
+    }
+
     fn flat_map<F, U>(self, fun: F) -> FlatMap<Self, F, U>
         where F: FnMut(Self::Item) -> U,
               U: IntoIter8or
@@ -214,8 +220,7 @@ impl<I, P> Iter8or for Filter<I, P>
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let (_lower, upper) = self.base.size_hint();
-        (0, upper)
+        (0, self.base.size_hint().1)
     }
 }
 
@@ -387,6 +392,32 @@ impl<A, B> ExactSizeIter8or for Zip<A, B>
 {
     fn len(&self) -> usize {
         cmp::min(self.left.len(), self.right.len())
+    }
+}
+
+pub struct FilterMap<I, F> {
+    base: I,
+    fun: F,
+}
+
+impl<I, F, B> Iter8or for FilterMap<I, F>
+    where I: Iter8or,
+          F: FnMut(I::Item) -> Option<B>
+{
+    type Item = B;
+
+    fn next(&mut self) -> Option<B> {
+        while let Some(item) = self.base.next() {
+            if let Some(item) = (self.fun)(item) {
+                return Some(item);
+            }
+        }
+
+        None
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, self.base.size_hint().1)
     }
 }
 
