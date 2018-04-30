@@ -116,7 +116,7 @@ fn read_measurements<R: Read>(reader: R) -> Vec<f64> {
     BufReader::new(reader).lines()
         .map(|r| r.expect("Could not read measurement"))
         .take_while(|line| line != "999")
-        .flat_map(|line| line.parse().ok())
+        .filter_map(|line| line.parse().ok())
         .filter(|&d| d >= 0.0)
         .collect()
 }
