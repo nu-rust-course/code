@@ -1,7 +1,7 @@
 use std::cmp;
 use std::mem;
 
-pub trait Iter8or: Sized {
+pub trait Iter8or {
     type Item;
 
     fn next(&mut self) -> Option<Self::Item>;
@@ -10,7 +10,9 @@ pub trait Iter8or: Sized {
         (0, None)
     }
 
-    fn count(mut self) -> usize {
+    fn count(mut self)-> usize
+        where Self: Sized
+    {
         let mut result = 0;
 
         while let Some(_) = self.next() {
@@ -20,7 +22,9 @@ pub trait Iter8or: Sized {
         result
     }
 
-    fn last(mut self) -> Option<Self::Item> {
+    fn last(mut self) -> Option<Self::Item>
+        where Self: Sized
+    {
         let mut result = None;
 
         while let Some(item) = self.next() {
@@ -30,7 +34,9 @@ pub trait Iter8or: Sized {
         result
     }
 
-    fn nth(mut self, mut n: usize) -> Option<Self::Item> {
+    fn nth(mut self, mut n: usize) -> Option<Self::Item>
+        where Self: Sized
+    {
         while n > 0 {
             if self.next().is_none() { return None; }
             n -= 1;
@@ -39,31 +45,44 @@ pub trait Iter8or: Sized {
         self.next()
     }
 
-    fn collect<T: FromIter8or<Self::Item>>(self) -> T {
+    fn by_ref(&mut self) -> &mut Self {
+        self
+    }
+
+    fn collect<T: FromIter8or<Self::Item>>(self) -> T
+        where Self: Sized
+    {
         T::from_iter(self)
     }
 
-    fn map<B, F: FnMut(Self::Item) -> B>(self, fun: F) -> Map<Self, F> {
+    fn map<B, F: FnMut(Self::Item) -> B>(self, fun: F) -> Map<Self, F>
+        where Self: Sized
+    {
         Map {
             base: self,
             fun
         }
     }
 
-    fn filter<P: FnMut(&Self::Item) -> bool>(self, pred: P) -> Filter<Self, P> {
+    fn filter<P: FnMut(&Self::Item) -> bool>(self, pred: P) -> Filter<Self, P>
+        where Self: Sized
+    {
         Filter {
             base: self,
             pred
         }
     }
 
-    fn any<P: FnMut(Self::Item) -> bool>(self, pred: P) -> bool {
+    fn any<P: FnMut(Self::Item) -> bool>(self, pred: P) -> bool
+        where Self: Sized
+    {
         self.map(pred).filter(|&b| b).next().is_some()
     }
 
     fn max_by_key<B, F>(mut self, mut get_key: F) -> Option<Self::Item>
         where B: Ord,
-              F: FnMut(&Self::Item) -> B
+              F: FnMut(&Self::Item) -> B,
+              Self: Sized
     {
         let mut best = None;
 
@@ -80,31 +99,38 @@ pub trait Iter8or: Sized {
         best.map(|(item, _)| item)
     }
 
-    fn enumerate(self) -> Enumerate<Self> {
+    fn enumerate(self) -> Enumerate<Self> where Self: Sized
+    {
         Enumerate { next: 0, base: self }
     }
 
     fn chain<U>(self, other: U) -> Chain<Self, U::IntoIter>
-        where U: IntoIter8or<Item = Self::Item>
+        where U: IntoIter8or<Item = Self::Item>,
+              U::IntoIter: Sized,
+              Self: Sized
     {
         Chain(ChainImpl::Both(self, other.into_iter8or()))
     }
 
     fn zip<U>(self, other: U) -> Zip<Self, U::IntoIter>
-        where U: IntoIter8or
+        where U: IntoIter8or,
+              U::IntoIter: Sized,
+              Self: Sized
     {
         Zip { left: self, right: other.into_iter8or() }
     }
 
     fn filter_map<F, B>(self, fun: F) -> FilterMap<Self, F>
-        where F: FnMut(Self::Item) -> Option<B>
+        where F: FnMut(Self::Item) -> Option<B>,
+              Self: Sized
     {
         FilterMap { base: self, fun }
     }
 
     fn flat_map<F, U>(self, fun: F) -> FlatMap<Self, F, U>
         where F: FnMut(Self::Item) -> U,
-              U: IntoIter8or
+              U: IntoIter8or,
+              Self: Sized,
     {
         FlatMap {
             base: self,
@@ -113,7 +139,9 @@ pub trait Iter8or: Sized {
         }
     }
 
-    fn peekable(self) -> Peek<Self> {
+    fn peekable(self) -> Peek<Self>
+        where Self: Sized
+    {
         Peek {
             base: self,
             next: None,
@@ -500,5 +528,55 @@ impl<I: Iter8or> Iter8or for Peek<I> {
 impl<I: ExactSizeIter8or> ExactSizeIter8or for Peek<I> {
     fn len(&self) -> usize {
         self.base.len() + if self.next.is_some() {1} else {0}
+    }
+}
+
+impl<'a, T: Iter8or> Iter8or for &'a mut T {
+    type Item = T::Item;
+
+    fn next(&mut self) -> Option<<Self as Iter8or>::Item> {
+        (*self).next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (*self as &T).size_hint()
+    }
+}
+
+impl<T, E, C> FromIter8or<Result<T, E>> for Result<C, E>
+    where C: FromIter8or<T>
+{
+    fn from_iter<I: IntoIter8or<Item=Result<T, E>>>(iter: I) -> Self {
+        struct Adapter<I, E> {
+            iter: I,
+            err:  Option<E>,
+        }
+
+        impl<T, E, I: Iter8or<Item=Result<T, E>>> Iter8or for Adapter<I, E> {
+            type Item = T;
+
+            fn next(&mut self) -> Option<T> {
+                match self.iter.next() {
+                    Some(Ok(value)) => Some(value),
+                    Some(Err(err)) => {
+                        self.err = Some(err);
+                        None
+                    }
+                    None => None,
+                }
+            }
+
+            fn size_hint(&self) -> (usize, Option<usize>) {
+                (0, self.iter.size_hint().1)
+            }
+        }
+
+        let mut adapter = Adapter { iter: iter.into_iter8or(), err: None };
+        let container: C = FromIter8or::from_iter(adapter.by_ref());
+
+        match adapter.err {
+            Some(err) => Err(err),
+            None      => Ok(container),
+        }
     }
 }
