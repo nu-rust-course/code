@@ -99,7 +99,8 @@ pub trait Iter8or {
         best.map(|(item, _)| item)
     }
 
-    fn enumerate(self) -> Enumerate<Self> where Self: Sized
+    fn enumerate(self) -> Enumerate<Self>
+        where Self: Sized
     {
         Enumerate { next: 0, base: self }
     }
