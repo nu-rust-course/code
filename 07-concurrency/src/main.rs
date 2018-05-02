@@ -1,14 +1,15 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use std::cmp::{min, max};
-use std::collections::LinkedList;
-use std::fmt::{self, Display};
-use std::io::{self, Write};
-use std::sync::{Arc, Condvar, Mutex, MutexGuard};
-use std::sync::mpsc::{sync_channel, SyncSender};
-use std::thread;
-use std::time::Duration;
+use std::{
+    cmp::{min, max},
+    collections::LinkedList,
+    fmt::{self, Display},
+    io::{self, Write},
+    sync::{Arc, Condvar, Mutex, MutexGuard, mpsc::{sync_channel, SyncSender}},
+    thread,
+    time::Duration,
+};
 
 use rand::distributions::{IndependentSample, Range};
 
