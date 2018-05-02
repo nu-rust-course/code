@@ -25,9 +25,7 @@ mod semaphore;
 fn wait_for_enter() {
     println!("Press enter to continue");
     io::stdout().flush().expect("flush");
-
-    let mut dummy = String::new();
-    io::stdin().read_line(&mut dummy).expect("read_line");
+    io::stdin().read_line(&mut String::new()).expect("read_line");
 }
 
 ///////////////////////////////////////////////////////////////////////////////
