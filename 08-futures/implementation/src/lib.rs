@@ -58,6 +58,24 @@ pub trait Future {
     }
 }
 
+pub trait IntoFuture {
+    type Item;
+    type Error;
+    type Future: Future<Item = Self::Item, Error = Self::Error>;
+
+    fn into_future(self) -> Self::Future;
+}
+
+impl<F: Future> IntoFuture for F {
+    type Item = F::Item;
+    type Error = F::Error;
+    type Future = F;
+
+    fn into_future(self) -> Self::Future {
+        self
+    }
+}
+
 type BoxFuture<I, E> = Box<Future<Item = I, Error = E> + Send>;
 
 #[derive(Debug)]
