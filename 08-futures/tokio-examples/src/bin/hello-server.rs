@@ -20,11 +20,8 @@ fn main() {
                 .then(|_| Ok(()));
         handle.spawn(serve_one);
         Ok(())
-//        tokio_io::io::write_all(socket, b"Hello, world!\n")
     });
-    let server = welcomes.for_each(|_| {
-        Ok(())
-    });
+    let server = welcomes.for_each(|_| Ok(()) );
 
     core.run(server).unwrap();
 }
