@@ -20,29 +20,32 @@ pub trait Future {
         where F: FnOnce(Self::Item) -> I,
               Self: Sized
     {
-        Map::new(self, f)
+        Map {
+            future: self,
+            fun:    Some(f),
+        }
     }
 
-    fn and_then<F, A>(self, f: F) -> AndThen<Self, A, F>
-        where F: FnOnce(Self::Item) -> A,
-              A: Future,
+    fn and_then<F, B>(self, f: F) -> AndThen<Self, B, F>
+        where F: FnOnce(Self::Item) -> B,
+              B: IntoFuture,
               Self: Sized
     {
-        AndThen::new(self, f)
+        AndThen::First(self, f)
     }
 
-    fn join<B>(self, other: B) -> Join<Self, B>
-        where B: Future<Error = Self::Error>,
+    fn join<B>(self, other: B) -> Join<Self, B::Future>
+        where B: IntoFuture<Error = Self::Error>,
               Self: Sized
     {
-        Join::new(self, other)
+        Join::Running(self, other.into_future())
     }
 
-    fn select<B>(self, other: B) -> Select<Self, B>
-        where B: Future<Item = Self::Item, Error = Self::Error>,
+    fn select<B>(self, other: B) -> Select<Self, B::Future>
+        where B: IntoFuture<Item = Self::Item, Error = Self::Error>,
               Self: Sized
     {
-        Select::new(self, other)
+        Select(Some((self, other.into_future())))
     }
 
     fn boxed(self) -> BoxFuture<Self::Item, Self::Error>
@@ -54,7 +57,7 @@ pub trait Future {
     fn fuse(self) -> Fuse<Self>
         where Self: Sized
     {
-        Fuse::new(self)
+        Fuse(Some(self))
     }
 }
 
@@ -85,15 +88,6 @@ pub struct Map<A: Future, F> {
     fun: Option<F>,
 }
 
-impl<A: Future, F> Map<A, F> {
-    pub fn new(future: A, fun: F) -> Self {
-        Map {
-            future: future,
-            fun: Some(fun),
-        }
-    }
-}
-
 impl<A, F, I> Future for Map<A, F> where
     A: Future,
     F: FnOnce(A::Item) -> I
@@ -115,21 +109,15 @@ impl<A, F, I> Future for Map<A, F> where
 
 #[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
-pub enum AndThen<A: Future, B: Future, F> {
+pub enum AndThen<A: Future, B: IntoFuture, F> {
     First(A, F),
-    Second(B),
+    Second(B::Future),
     Done,
-}
-
-impl<A: Future, B: Future, F> AndThen<A, B, F> {
-    pub fn new(a: A, f: F) -> Self {
-        AndThen::First(a, f)
-    }
 }
 
 impl<A, B, F> Future for AndThen<A, B, F>
     where A: Future,
-          B: Future<Error = A::Error>,
+          B: IntoFuture<Error = A::Error>,
           F: FnOnce(A::Item) -> B
 {
     type Item = B::Item;
@@ -152,7 +140,7 @@ impl<A, B, F> Future for AndThen<A, B, F>
 
         match mem::replace(self, Done) {
             First(_, f) => {
-                let mut b = f(va);
+                let mut b = f(va).into_future();
                 let result = b.poll();
                 *self = Second(b);
                 result
@@ -169,12 +157,6 @@ pub enum Join<A: Future, B: Future> {
     AReady(A::Item, B),
     BReady(A, B::Item),
     Done,
-}
-
-impl<A: Future, B: Future> Join<A, B> {
-    pub fn new(a: A, b: B) -> Self {
-        Join::Running(a, b)
-    }
 }
 
 impl<A: Future, B: Future<Error = A::Error>> Future for Join<A, B> {
@@ -234,12 +216,6 @@ pub enum SelectNext<A: Future, B: Future> {
     B(B),
 }
 
-impl<A: Future, B: Future> Select<A, B> {
-    pub fn new(left: A, right: B) -> Self {
-        Select(Some((left, right)))
-    }
-}
-
 impl<A, B> Future for Select<A, B>
     where A: Future,
           B: Future<Item = A::Item, Error = A::Error>
@@ -285,12 +261,6 @@ impl<A, B> Future for SelectNext<A, B>
 #[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
 pub struct Fuse<A>(Option<A>);
-
-impl<A: Future> Fuse<A> {
-    pub fn new(future: A) -> Self {
-        Fuse(Some(future))
-    }
-}
 
 impl<A: Future> Future for Fuse<A> {
     type Item = A::Item;
