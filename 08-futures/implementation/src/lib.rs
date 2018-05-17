@@ -34,6 +34,14 @@ pub trait Future {
         AndThen::First(self, f)
     }
 
+    fn then<F, B>(self, f: F) -> Then<Self, B, F>
+        where F: FnOnce(Result<Self::Item, Self::Error>) -> B,
+              B: IntoFuture,
+              Self: Sized
+    {
+        Then::First(self, f)
+    }
+
     fn join<B>(self, other: B) -> Join<Self, B::Future>
         where B: IntoFuture<Error = Self::Error>,
               Self: Sized
@@ -141,6 +149,49 @@ impl<A, B, F> Future for AndThen<A, B, F>
         match mem::replace(self, Done) {
             First(_, f) => {
                 let mut b = f(va).into_future();
+                let result = b.poll();
+                *self = Second(b);
+                result
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[derive(Debug)]
+#[must_use = "futures do nothing unless polled"]
+pub enum Then<A: Future, B: IntoFuture, F> {
+    First(A, F),
+    Second(B::Future),
+    Done,
+}
+
+impl<A, B, F> Future for Then<A, B, F>
+    where A: Future,
+          B: IntoFuture,
+          F: FnOnce(Result<A::Item, A::Error>) -> B
+{
+    type Item = B::Item;
+    type Error = B::Error;
+
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        use Then::*;
+
+        let ra = match self {
+            First(a, _) => {
+                match a.poll() {
+                    Err(e)        => Err(e),
+                    Ok(NotReady)  => return Ok(NotReady),
+                    Ok(Ready(va)) => Ok(va),
+                }
+            }
+            Second(b)   => return b.poll(),
+            Done        => panic!("cannot poll AndThen twice"),
+        };
+
+        match mem::replace(self, Done) {
+            First(_, f) => {
+                let mut b = f(ra).into_future();
                 let result = b.poll();
                 *self = Second(b);
                 result
