@@ -3,13 +3,11 @@
 //! This code is based on [an article by Aaron
 //! Turon](https://aturon.github.io/blog/2015/08/27/epoch/).
 
-extern crate crossbeam;
-
 use std::ptr;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::{Acquire, Release, AcqRel, Relaxed};
 
-use self::crossbeam::mem::epoch::{self, Atomic, Owned};
+use epoch::{self, Atomic, Owned};
 
 /// A lock-free stack.
 ///
@@ -60,7 +58,7 @@ impl<T> TreiberStack<T> {
     /// assert!(! stack.is_empty());
     /// ```
     pub fn is_empty(&self) -> bool {
-        self.head.load(Acquire, &epoch::pin()).is_none()
+        self.head.load(Acquire, &epoch::pin()).is_null()
     }
 
     /// Returns a snapshop of the number of elements in the stack.
@@ -94,14 +92,14 @@ impl<T> TreiberStack<T> {
 
         loop {
             let head = self.head.load(Acquire, &guard);
-            new_node.next.store_shared(head, Relaxed);
+            new_node.next.store(head, Relaxed);
 
-            match self.head.cas(head, Some(new_node), Release) {
+            match self.head.compare_and_set(head, new_node, Release, &guard) {
                 Ok(_) => {
                     self.len.fetch_add(1, AcqRel);
                     return;
                 }
-                Err(owned) => new_node = owned.unwrap(),
+                Err(owned) => new_node = owned.new,
             }
         }
     }
@@ -112,13 +110,14 @@ impl<T> TreiberStack<T> {
         let guard = epoch::pin();
 
         loop {
-            if let Some(head) = self.head.load(Acquire, &guard) {
+            let shared_head = self.head.load(Acquire, &guard);
+            if let Some(head) = unsafe { shared_head.as_ref() } {
                 let next = head.next.load(Relaxed, &guard);
 
-                if self.head.cas_shared(Some(head), next, Release) {
+                if self.head.compare_and_set(shared_head, next, Release, &guard).is_ok() {
                     self.len.fetch_sub(1, AcqRel);
                     return Some(unsafe {
-                        guard.unlinked(head);
+                        guard.defer(move || shared_head.into_owned());
                         ptr::read(&head.data)
                     });
                 }
@@ -146,7 +145,9 @@ impl<T: Clone> TreiberStack<T> {
     /// ```
     pub fn peek(&self) -> Option<T> {
         let guard = epoch::pin();
-        self.head.load(Acquire, &guard).map(|head| head.data.clone())
+        unsafe {
+            self.head.load(Acquire, &guard).as_ref().map(|head| head.data.clone())
+        }
     }
 }
 
