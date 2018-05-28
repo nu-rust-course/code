@@ -1,7 +1,0 @@
-[package]
-name = "stacks"
-version = "0.1.0"
-authors = ["Jesse A. Tov <jesse.tov@gmail.com>"]
-
-[dependencies]
-crossbeam = "0.2"
