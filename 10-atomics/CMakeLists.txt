@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.3)
 project(atomics CXX)
-include(.eecs395/CMakeLists.txt)
+
+include_directories(src)
+
+macro (add_program name)
+    add_executable(${name} ${ARGN})
+    set_property(TARGET ${name} PROPERTY CXX_STANDARD 14)
+    set_property(TARGET ${name} PROPERTY CXX_STANDARD_REQUIRED On)
+endmacro (add_program)
 
 add_program(example_broken
         src/Run_example.h src/example_broken.cpp)
