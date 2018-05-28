@@ -145,9 +145,8 @@ impl<T: Clone> TreiberStack<T> {
     /// ```
     pub fn peek(&self) -> Option<T> {
         let guard = epoch::pin();
-        unsafe {
-            self.head.load(Acquire, &guard).as_ref().map(|head| head.data.clone())
-        }
+        let shared_head = self.head.load(Acquire, &guard);
+        unsafe { shared_head.as_ref() }.map(|head| head.data.clone())
     }
 }
 
