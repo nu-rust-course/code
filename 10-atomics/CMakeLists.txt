@@ -9,6 +9,9 @@ macro (add_program name)
     set_property(TARGET ${name} PROPERTY CXX_STANDARD_REQUIRED On)
 endmacro (add_program)
 
+add_program(example_example
+        src/Run_example.h src/example_example.cpp)
+
 add_program(example_broken
         src/Run_example.h src/example_broken.cpp)
 add_program(mutex_broken
