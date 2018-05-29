@@ -78,13 +78,11 @@ impl<T> Stack<T> {
 
     /// Pushes an element on top of the stack.
     pub fn push(&mut self, data: T) {
-        let old_head = self.head.take();
-        let new_head = Some(Box::new(Node {
-            data: data,
-            next: old_head,
+        self.head = Some(Box::new(Node {
+            data,
+            next: self.head.take(),
         }));
         self.len += 1;
-        self.head = new_head;
     }
 
     /// Removes and returns the top element of the stack, or `None` if
