@@ -497,14 +497,15 @@ impl<T: Clone> Clone for Set<T> {
         let mut result = Set::new();
 
         {
-            let mut cur = CursorMut::new(&mut result);
+            let mut cur = &mut result.head;
 
             for each in self {
-                cur.insert(each.clone());
-                cur.advance();
+                *cur = Some(Box::new(Node { data: each.clone(), link: None, }));
+                cur = &mut {cur}.as_mut().unwrap().link;
             }
         }
 
+        result.len = self.len;
         result
     }
 }
