@@ -12,15 +12,15 @@ endmacro (add_program)
 add_program(example_example
         src/Run_example.h src/example_example.cpp)
 
-add_program(example_broken
-        src/Run_example.h src/example_broken.cpp)
+add_program(race_broken
+        src/Run_example.h src/race_broken.cpp)
 add_program(mutex_broken
         src/Run_example.h src/mutex_broken.cpp)
 add_program(publish_broken
         src/Run_example.h src/publish_broken.cpp)
 
-add_program(example_atomic
-        src/Run_example.h src/example_atomic.cpp)
+add_program(race_atomic
+        src/Run_example.h src/race_atomic.cpp)
 add_program(mutex_atomic
         src/Run_example.h src/mutex_atomic.cpp)
 add_program(publish_atomic
