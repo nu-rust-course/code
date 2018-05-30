@@ -14,9 +14,6 @@ struct Node<K, V> {
 
 type Link<K, V> = Option<Box<Node<K, V>>>;
 
-#[derive(Debug)]
-struct CursorMut<'a, K: 'a, V: 'a>(Option<&'a mut Node<K, V>>);
-
 impl<K, V> BST<K, V> {
     pub fn new() -> Self {
         BST(None)
@@ -46,11 +43,20 @@ impl<K: Ord, V> BST<K, V> {
     }
 
     pub fn insert(&mut self, key: K, value: V) -> Option<(K, V)> {
-        Node::insert_rec(&mut self.0, key, value)
+        Node::insert_iter(&mut self.0, key, value)
     }
 }
 
 impl<K, V> Node<K, V> {
+    fn new(key: K, value: V) -> Box<Self> {
+        Box::new(Node {
+            key,
+            value,
+            left: None,
+            right: None,
+        })
+    }
+
     #[allow(dead_code)]
     fn len_rec(ptr: &Link<K, V>) -> usize {
         if let Some(ref node_ptr) = *ptr {
@@ -113,31 +119,30 @@ impl<K: Ord, V> Node<K, V> {
         } else {None}
     }
 
+
     fn find_mut_iter<'a, 'b>(ptr: &'a mut Link<K, V>, key: &'b K)
         -> Option<&'a mut V>
     {
-        let mut cur: CursorMut<'a, K, V> =
-            CursorMut(ptr.as_mut().map(|node| &mut **node));
+        let mut cur = ptr.as_mut();
 
         loop {
-            match cur.key().map(|k| key.cmp(k)) {
-                Some(Less)     => { cur.left(); }
-                Some(Greater)  => { cur.right(); }
-                Some(Equal)    => { return cur.into_mut_value(); }
-                None           => { return None; }
+            if let Some(node) = cur.map(|node| &mut **node) {
+                match key.cmp(&node.key) {
+                    Less    => cur = node.left.as_mut(),
+                    Greater => cur = node.right.as_mut(),
+                    Equal   => return Some(&mut node.value),
+                }
+            } else {
+                return None;
             }
         }
     }
 
+    #[allow(dead_code)]
     fn insert_rec(ptr: &mut Link<K, V>, key: K, value: V) -> Option<(K, V)> {
         match *ptr {
             None => {
-                *ptr = Some(Box::new(Node {
-                    key,
-                    value,
-                    left: None,
-                    right: None,
-                }));
+                *ptr = Some(Node::new(key, value));
                 None
             }
 
@@ -145,44 +150,26 @@ impl<K: Ord, V> Node<K, V> {
                 match key.cmp(&node_ptr.key) {
                     Less    => Node::insert_rec(&mut node_ptr.left, key, value),
                     Greater => Node::insert_rec(&mut node_ptr.right, key, value),
-                    Equal   =>
-                        Some((mem::replace(&mut node_ptr.key, key),
-                              mem::replace(&mut node_ptr.value, value))),
+                    Equal   => Some((mem::replace(&mut node_ptr.key, key),
+                                     mem::replace(&mut node_ptr.value, value))),
                 }
             }
         }
     }
 
-    // Challenge: insert_iter
-}
-
-impl<'a, K, V> CursorMut<'a, K, V> {
-    fn left(&mut self) {
-//        self.0 = self.0.take()
-//            .expect("CursorMut::left: empty cursor")
-//            .left.as_mut().map(Box::as_mut);
-
-        let step1: Option<&'a mut Node<K, V>>      = self.0.take();
-        let step2: &'a mut Node<K, V>              = step1.expect("stuff");
-        let step3: &'a mut Option<Box<Node<K, V>>> = &mut step2.left;
-        let step4: Option<&'a mut Box<Node<K, V>>> = step3.as_mut();
-        let step5: Option<&'a mut Node<K, V>>      = step4.map(Box::as_mut);
-        self.0 = step5;
-    }
-
-    fn right(&mut self) {
-        match self.0.take().expect("CursorMut::right: empty cursor").right {
-            Some(ref mut node_ptr) => self.0 = Some(&mut **node_ptr),
-            None => self.0 = None,
+    fn insert_iter(mut ptr: &mut Link<K, V>, key: K, value: V) -> Option<(K, V)> {
+        while ptr.is_some() {
+            let node = {ptr}.as_mut().unwrap();
+            match key.cmp(&node.key) {
+                Less    => ptr = &mut node.left,
+                Greater => ptr = &mut node.right,
+                Equal   => return Some((mem::replace(&mut node.key, key),
+                                        mem::replace(&mut node.value, value))),
+            }
         }
-    }
 
-    fn key(&self) -> Option<&K> {
-        self.0.as_ref().map(|n| &n.key)
-    }
-
-    fn into_mut_value(self) -> Option<&'a mut V> {
-        self.0.map(|n| &mut n.value)
+        *ptr = Some(Node::new(key, value));
+        return None;
     }
 }
 
