@@ -253,6 +253,6 @@ mod write_output_tests {
         write_output(&mut writer, results).unwrap();
         assert_eq!(expected, String::from_utf8(writer).unwrap());
         // consider the previous line versus:
-        // assert_eq!(expected.as_bytes(), &*writer.into_inner());
+        // assert_eq!(expected.as_bytes(), &*writer);
     }
 }
