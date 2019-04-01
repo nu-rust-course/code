@@ -1,15 +1,15 @@
-out.bmp
 # CMake build directories:
-build
-build.*
-cmake-build-*
+cmake-build-*/
+build/
+build.*/
 
-# CLion configuration
-.idea/
+# Cargo/Rust build directory:
+target/
 
-# Assembly
+# CLion configuration:
+.idea/*
+!.idea/runConfigurations/
+
+# Assembly output:
 *.s
 
-# Cargo/Rust
-target/
-Cargo.lock
