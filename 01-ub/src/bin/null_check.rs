@@ -2,8 +2,7 @@ fn zero_ptr(p: &mut i32) {
     *p = 0;
 }
 
-fn zero_optional_ptr(op: Option<&mut i32>)
-{
+fn zero_optional_ptr(op: Option<&mut i32>) {
     if let Some(p) = op {
         *p = 0;
     }

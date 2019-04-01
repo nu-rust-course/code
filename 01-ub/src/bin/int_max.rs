@@ -15,5 +15,5 @@ fn test_int(x: i32) {
 
 fn main() {
     test_int(5);
-    test_int(::std::i32::MAX);
+    test_int(std::i32::MAX);
 }
