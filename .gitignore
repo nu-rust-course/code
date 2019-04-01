@@ -7,9 +7,8 @@ build.*/
 target/
 
 # CLion configuration:
-.idea/*
+.idea/
 !.idea/runConfigurations/
 
 # Assembly output:
 *.s
-
