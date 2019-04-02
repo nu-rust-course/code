@@ -20,7 +20,7 @@ void print_vec(const std::vector<T>& v)
 int main ()
 {
     std::vector<int> v{1, 2, 3, 4, 5};
-    v.reserve(10); // comment out this line for different behavior
+//    v.reserve(10); // comment out this line for different behavior
     double_repeat(v);
     print_vec(v);
 }

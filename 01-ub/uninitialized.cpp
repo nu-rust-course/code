@@ -1,5 +1,3 @@
-// You know what's faster than conditionally initializing a variable?
-// Unconditionally initializing a variable.
 
 #include <iostream>
 

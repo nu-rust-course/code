@@ -20,4 +20,5 @@ void test(int x)
 int main()
 {
     test(3);
+    test(INT_MAX);
 }
