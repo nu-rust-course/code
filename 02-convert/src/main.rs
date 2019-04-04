@@ -1,12 +1,8 @@
 //! Reads a Fahrenheit temperature from stdin and converts it into
 //! Celsius.
 
-extern crate convert;
-
-use std::io;
-use std::io::Write;
-
 use convert::f_to_c;
+use std::io::{self, Write};
 
 fn main() {
     let f = read_input();

@@ -1,4 +1,4 @@
-//! Contains functions for converting between units.
+//! Provides functions for converting between units.
 
 /// Converts a Fahrenheit temperature into Celsius.
 ///
@@ -18,16 +18,16 @@ mod tests {
 
     #[test]
     fn water_boiling() {
-        assert_eq!(100., f_to_c(212.));
+        assert_eq!(f_to_c(212.), 100.);
     }
 
     #[test]
     fn water_freezing() {
-        assert_eq!(0., f_to_c(32.));
+        assert_eq!(f_to_c(32.), 0.);
     }
 
     #[test]
     fn same_number() {
-        assert_eq!(-40., f_to_c(-40.));
+        assert_eq!(f_to_c(-40.), -40.);
     }
 }

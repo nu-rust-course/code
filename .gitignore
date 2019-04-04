@@ -8,7 +8,6 @@ target/
 
 # CLion configuration:
 .idea/
-!.idea/runConfigurations/
 
 # Assembly output:
 *.s
