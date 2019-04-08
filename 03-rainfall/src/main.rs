@@ -60,7 +60,7 @@ fn main() {
     // and writes to `Write` is a bit weird, but when we can do it as
     // in this case, it lets us test the whole program from within
     // Rust's unit testing framework.
-    transform(stdin(), stdout());
+    transform(stdin(), stdout()).unwrap();
 }
 
 // Reads measurements from the given input stream and prints the summary to
@@ -68,9 +68,9 @@ fn main() {
 // functionality of the rainfall program, which makes it possible to test
 // the whole thing from simulated input to expected output. This isn't
 // possible for every program, but when it is then it's pretty nice.
-fn transform<R: Read, W: Write>(input: R, output: W) {
+fn transform<R: Read, W: Write>(input: R, output: W) -> io::Result<()> {
     let measurements = read_measurements(input);
-    write_output(output, calculate_results(&measurements)).unwrap();
+    write_output(output, calculate_results(&measurements))
 }
 
 #[cfg(test)]
@@ -98,7 +98,7 @@ mod transform_tests {
 
     fn assert_transform(input: &str, expected_output: &str) {
         let mut output = Vec::new();
-        transform(input.as_bytes(), &mut output);
+        transform(input.as_bytes(), &mut output).unwrap();
         let output_string = String::from_utf8(output).unwrap();
         assert_eq!( output_string, expected_output );
     }
