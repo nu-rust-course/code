@@ -53,14 +53,14 @@
  *    to print, so we will print an explanatory message instead.
  */
 
-use std::io::{self, BufRead, BufReader, Read, stdin, Write, stdout};
+use std::io::{self, BufRead, BufReader, Read, Write};
 
-fn main() {
+fn main() -> io::Result<()> {
     // Writing the whole program as a function that reads from a `Read`
-    // and writes to `Write` is a bit weird, but when we can do it as
+    // and writes to `Write` is a bit unusual, but when we can do it as
     // in this case, it lets us test the whole program from within
     // Rust's unit testing framework.
-    transform(stdin(), stdout());
+    transform(io::stdin(), io::stdout())
 }
 
 // Reads measurements from the given input stream and prints the summary to
@@ -68,9 +68,9 @@ fn main() {
 // functionality of the rainfall program, which makes it possible to test
 // the whole thing from simulated input to expected output. This isn't
 // possible for every program, but when it is then it's pretty nice.
-fn transform<R: Read, W: Write>(input: R, output: W) {
-    let measurements = read_measurements(input);
-    write_output(output, calculate_results(&measurements)).unwrap();
+fn transform<R: Read, W: Write>(input: R, output: W) -> io::Result<()> {
+    let measurements = read_measurements(input)?;
+    write_output(output, calculate_results(&measurements))
 }
 
 #[cfg(test)]
@@ -98,26 +98,58 @@ mod transform_tests {
 
     fn assert_transform(input: &str, expected_output: &str) {
         let mut output = Vec::new();
-        transform(input.as_bytes(), &mut output);
+        transform(input.as_bytes(), &mut output).unwrap();
         let output_string = String::from_utf8(output).unwrap();
         assert_eq!( output_string, expected_output );
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-struct Results {
+struct RainfallStats {
     mean:  f64,
     above: usize,
     below: usize,
 }
 
 // Reads the measurements from an input stream, cleaning and returning them.
-fn read_measurements<R: Read>(reader: R) -> Vec<f64> {
+#[allow(unused)]
+fn read_measurements0<R: Read>(reader: R) -> Vec<f64> {
     BufReader::new(reader).lines()
         .map(|r| r.expect("Could not read measurement"))
         .take_while(|line| line != "999")
         .filter_map(|line| line.parse().ok())
         .filter(|&d| d >= 0.0)
+        .collect()
+}
+
+// Reads the measurements from an input stream, cleaning and returning them.
+#[allow(unused)]
+fn read_measurements1<R: Read>(reader: R) -> io::Result<Vec<f64>> {
+    let mut result = Vec::new();
+
+    for line in BufReader::new(reader).lines() {
+        let line = line?;
+
+        if line == "999" {
+            break;
+        }
+
+        if let Ok(d) = line.parse() {
+            if d >= 0.0 {
+                result.push(d);
+            }
+        }
+    }
+
+    Ok(result)
+}
+
+// Reads the measurements from an input stream, cleaning and returning them.
+fn read_measurements<R: Read>(reader: R) -> io::Result<Vec<f64>> {
+    BufReader::new(reader).lines()
+        .take_while(|r| r.as_ref().map(String::as_str).unwrap_or("") != "999")
+        .filter_map(|r| r.map(|line| line.parse().ok()).transpose())
+        .filter(|r| *r.as_ref().unwrap_or(&0.0) >= 0.0)
         .collect()
 }
 
@@ -147,18 +179,18 @@ mod read_measurements_tests {
 
     // Asserts that reading from `input` yields `expected`.
     fn assert_read(expected: &[f64], input: &str) {
-        let measurements = read_measurements(input.as_bytes());
+        let measurements = read_measurements(input.as_bytes()).unwrap();
         assert_eq!(expected, measurements.as_slice());
     }
 }
 
 // Calculates the results for the given dataset.
-fn calculate_results(fs: &[f64]) -> Results {
+fn calculate_results(fs: &[f64]) -> RainfallStats {
     let mean = mean(fs);
     let below = fs.iter().filter(|x| mean - 5.0 <= **x && **x < mean).count();
     let above = fs.iter().filter(|x| mean < **x && **x <= mean + 5.0).count();
 
-    Results {
+    RainfallStats {
         mean,
         above,
         below,
@@ -167,19 +199,19 @@ fn calculate_results(fs: &[f64]) -> Results {
 
 #[cfg(test)]
 mod calculate_results_tests {
-    use super::{calculate_results, Results};
+    use super::{calculate_results, RainfallStats};
 
     #[test]
     fn given_example() {
         let samples  = &[12.5, 18., 7., 0., 4.];
-        let expected = Results { mean: 8.3, above: 1, below: 2 };
+        let expected = RainfallStats { mean: 8.3, above: 1, below: 2 };
         assert_eq!( expected, calculate_results(samples) );
     }
 }
 
 // Computes the mean of a slice of samples.
 fn mean(samples: &[f64]) -> f64 {
-    sum(samples) / samples.len() as f64
+    samples.iter().sum::<f64>() / samples.len() as f64
 }
 
 #[cfg(test)]
@@ -197,28 +229,8 @@ mod mean_tests {
     }
 }
 
-// Computes the sum of a slice of samples.
-fn sum(samples: &[f64]) -> f64 {
-    samples.iter().fold(0.0, |a,b| a + *b)
-}
-
-#[cfg(test)]
-mod sum_tests {
-    use super::sum;
-
-    #[test]
-    fn sum_empty_is_0() {
-        assert_eq!(0.0, sum(&[]));
-    }
-
-    #[test]
-    fn sum_1_2_3_4_is_10() {
-        assert_eq!(10.0, sum(&[1., 2., 3., 4.]));
-    }
-}
-
 // Writes the results to the given output stream.
-fn write_output<W: Write>(mut writer: W, r: Results) -> io::Result<()> {
+fn write_output<W: Write>(mut writer: W, r: RainfallStats) -> io::Result<()> {
   if r.mean.is_nan() {
       writeln!(writer, "No measurements provided.")
   } else {
@@ -230,25 +242,25 @@ fn write_output<W: Write>(mut writer: W, r: Results) -> io::Result<()> {
 
 #[cfg(test)]
 mod write_output_tests {
-    use super::{write_output, Results};
+    use super::{write_output, RainfallStats};
 
     #[test]
     fn no_measurements_output() {
         use std::f64::NAN;
         assert_write(
             "No measurements provided.\n",
-            Results { mean: NAN, above: 0, below: 0 });
+            RainfallStats { mean: NAN, above: 0, below: 0 });
     }
 
     #[test]
     fn some_measurements_output() {
         assert_write(
             "Mean rainfall: 5 cm\nBelow count:   3\nAbove count:   2\n",
-            Results { mean: 5., above: 2, below: 3 });
+            RainfallStats { mean: 5., above: 2, below: 3 });
     }
 
     // Asserts that `results` when written produces `expected`.
-    fn assert_write(expected: &str, results: Results) {
+    fn assert_write(expected: &str, results: RainfallStats) {
         let mut writer = Vec::new();
         write_output(&mut writer, results).unwrap();
         assert_eq!(expected, String::from_utf8(writer).unwrap());
