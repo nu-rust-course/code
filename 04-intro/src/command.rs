@@ -48,3 +48,36 @@ In Rust we can do better by making the type only capable of
 representing valid commands:
 */
 
+/// hi
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Command {
+    /// Uploads...
+    UploadFile(String, String),
+    /// Downloads...
+    DownloadFile(String, String),
+    RemoveFile(String),
+    ListFiles,
+}
+
+impl Command {
+    pub fn src_file(&self) -> Option<&str> {
+        match self {
+            Command::UploadFile(src, _) => Some(src),
+            Command::DownloadFile(src, _) => Some(src),
+            _ => None,
+        }
+    }
+
+    pub fn remote_file(&self) -> Option<&str> {
+        use self::Command::*;
+
+        match self {
+            ListFiles =>
+                None,
+            UploadFile(_, rem) | DownloadFile(rem, _) | RemoveFile(rem) =>
+                Some(rem)
+        }
+
+    }
+}
+
