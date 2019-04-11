@@ -259,7 +259,7 @@ it:
     https://doc.rust-lang.org/std/io/struct.File.html
 
 [`std::io::Result`]:
-    https://doc.rust-lang.org/std/io/enum.Result.html
+    https://doc.rust-lang.org/std/io/type.Result.html
 
 [`stdin`]:
     https://doc.rust-lang.org/std/io/fn.stdin.html
