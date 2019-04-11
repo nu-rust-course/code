@@ -29,7 +29,7 @@ fn gcd(mut a: isize, mut b: isize) -> isize
 fn gcd_generic<N>(mut a: N, mut b: N) -> N
     where N: Copy + Eq + Rem<Output = N> + Sub<Output = N>
 {
-    #[cfg_attr(feature = "cargo-clippy", allow(eq_op))]
+    #[allow(clippy::eq_op)]
     let zero = a - a;
 
     while a != zero {
@@ -114,7 +114,7 @@ impl<'a> Neg for &'a Rational {
 impl Mul<Rational> for Rational {
     type Output = Rational;
 
-    #[cfg_attr(feature = "cargo-clippy", allow(suspicious_arithmetic_impl))]
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn mul(self, other: Rational) -> Rational {
         let ab_divisor = gcd(self.num(), other.den());
         let ba_divisor = gcd(other.num(), self.den());

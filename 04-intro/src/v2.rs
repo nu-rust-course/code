@@ -1,8 +1,10 @@
 //! 2-vectors of `f64`s. Not to be confused with `std::vec::Vec`, these
 //! are pairs representing 2-D vectors.
 
-use std::fmt;
-use std::ops::{Add, Mul, Neg, Sub};
+use std::{
+    fmt,
+    ops::{Add, Mul, Neg, Sub},
+};
 
 /// A 2-vector of `f64`s.
 #[derive(Clone, Copy, PartialEq, Debug)]
