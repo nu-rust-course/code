@@ -68,11 +68,12 @@ ways of expressing this kind of algorithm. So let’s return to
  3. [attempts to parse] each line into an `f64`, filtering it out of the
     stream when parsing fails,
  4. [filters out] negative readings, and finally
- 5. [collects] the remaining readings into an `io::Result<Vec<f64>>`.
+ 5. [collects] the remaining readings into an
+    `std::io::Result<Vec<f64>>`.
 
 This time, step 5 is particularly interesting. As in the other
 implementations, the stream of lines returned by [`BufRead::lines`] is
-an iterator not over `String`s but over `io::Result<String>`s; but
+an iterator not over `String`s but over `std::io::Result<String>`s; but
 unlike in [`read_measurements0`], we don’t bail out on errors. Instead,
 steps 2–4 all have to deal with the possibility of errors, which is why
 steps 2 and 3 use [`Result::map`] to work on `Ok` results while passing
@@ -81,12 +82,12 @@ steps 2 and 3 use [`Result::map`] to work on `Ok` results while passing
 predicate accepts.
 
 Thus, coming out of step 4 and into step 5 is a stream of
-`io::Result<f64>`s, and [`Iterator::collect`] must turn an iterator over
-`io::Result<f64>`s turn into an `io::Result<Vec<f64>>`. What does this
-mean? If every `io::Result<f64>` in the stream is `Ok` then it returns
-`Ok` of a vector containing all the `f64`s, but if it ever encounters
-`Err` of some `io::Error` `e` then it returns `Err(e)` immediately as
-well. Here is the `impl` logic:
+`std::io::Result<f64>`s, and [`Iterator::collect`] must turn an iterator
+over `std::io::Result<f64>`s turn into an `std::io::Result<Vec<f64>>`.
+What does this mean? If every `std::io::Result<f64>` in the stream is
+`Ok` then it returns `Ok` of a vector containing all the `f64`s, but if
+it ever encounters `Err` of some `std::io::Error` `e` then it returns
+`Err(e)` immediately as well. Here is the `impl` logic:
 
 ```rust
 impl<T, E, C> FromIterator<Result<T, E>> for Result<C, E>
@@ -102,10 +103,10 @@ That is:
   - then an iterator over `Result<T, E>`s can be collected into
     a `Result<C, E>`.
 
-Noting that [`io::Result<A>`][`std::io::Result`] is a synonym for
-`Result<A, io::Error>`, we can see that [step 5][collects] uses
-the aforementioned `impl` with `T = f64`, `E = io::Error`, and
-`C = Vec<f64>`.
+Noting that [`std::io::Result<A>`][`std::io::Result`] is a synonym for
+`Result<A, std::io::Error>`, we can see that [step 5][collects] uses the
+aforementioned `impl` with `T = f64`, `E = std::io::Error`, and `C =
+Vec<f64>`.
 
 ## Testing IO
 
