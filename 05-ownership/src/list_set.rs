@@ -23,13 +23,10 @@ use std::mem;
 /// ```
 #[derive(Debug)]
 pub struct Set<T> {
-    head: InnerSet<T>,
+    head: Link<T>,
     len:  usize,
 }
 // Invariant: the elements must be sorted according to <T as Ord>.
-
-#[derive(Debug)]
-struct InnerSet<T>(Link<T>);
 
 type Link<T> = Option<Box<Node<T>>>;
 
@@ -39,9 +36,9 @@ struct Node<T> {
     link: Link<T>,
 }
 
-impl<T> Drop for InnerSet<T> {
+impl<T> Drop for Set<T> {
     fn drop(&mut self) {
-        let mut head = self.0.take();
+        let mut head = self.head.take();
 
         while let Some(next) = head.take() {
             head = next.link;
@@ -68,7 +65,7 @@ impl<T> Set<T> {
     pub fn new() -> Self {
         Set {
             len:  0,
-            head: InnerSet(None),
+            head: None,
         }
     }
 
@@ -167,7 +164,7 @@ impl<T: Ord> Set<T> {
     /// assert!(!set.contains(&6));
     /// ```
     pub fn contains(&self, element: &T) -> bool {
-        let mut current = &self.head.0;
+        let mut current = &self.head;
 
         while let Some(ref node) = *current {
             match element.cmp(&node.data) {
@@ -311,7 +308,7 @@ struct CursorMut<'a, T: 'a> {
 impl<'a, T: 'a> CursorMut<'a, T> {
     fn new(set: &'a mut Set<T>) -> Self {
         CursorMut {
-            link: Some(&mut set.head.0),
+            link: Some(&mut set.head),
             len:  &mut set.len,
         }
     }
@@ -413,7 +410,7 @@ impl<'a, T> IntoIterator for &'a Set<T> {
 
     fn into_iter(self) -> Iter<'a, T> {
         Iter {
-            link: &self.head.0,
+            link: &self.head,
             len: self.len,
         }
     }
@@ -523,7 +520,7 @@ impl<T: Clone> Clone for Set<T> {
         let mut result = Set::new();
 
         {
-            let mut cur = &mut result.head.0;
+            let mut cur = &mut result.head;
 
             for each in self {
                 *cur = Node::new(each.clone(), None);
@@ -567,8 +564,8 @@ impl<T: Ord> Set<T> {
     /// assert!(!set3.is_disjoint(&set3));
     /// ```
     pub fn is_disjoint(&self, other: &Set<T>) -> bool {
-        let mut i = &self.head.0;
-        let mut j = &other.head.0;
+        let mut i = &self.head;
+        let mut j = &other.head;
 
         while let (&Some(ref ilink), &Some(ref jlink)) = (i, j) {
             match ilink.data.cmp(&jlink.data) {
@@ -604,8 +601,8 @@ impl<T: Ord> Set<T> {
     /// assert!( set3.is_subset(&set3));
     /// ```
     pub fn is_subset(&self, other: &Set<T>) -> bool {
-        let mut i = &self.head.0;
-        let mut j = &other.head.0;
+        let mut i = &self.head;
+        let mut j = &other.head;
 
         while let (&Some(ref ilink), &Some(ref jlink)) = (i, j) {
             match ilink.data.cmp(&jlink.data) {
