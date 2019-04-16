@@ -859,79 +859,70 @@ impl<'a, T, P> Drop for DrainFilter<'a, T, P>
     }
 }
 
+#[cfg(any(test, feature = "quickcheck"))]
+mod impl_arbitrary_for_set {
+    use super::Set;
+    use quickcheck::{Arbitrary, Gen};
+    use std::iter::FromIterator;
+
+    impl<T: Arbitrary + Ord> Arbitrary for Set<T> {
+        fn arbitrary<G: Gen>(g: &mut G) -> Self {
+            FromIterator::from_iter(Vec::<T>::arbitrary(g))
+        }
+
+        fn shrink(&self) -> Box<Iterator<Item=Self>> {
+            Box::new(Vec::from_iter(Set::clone(self))
+                .shrink()
+                .map(FromIterator::from_iter))
+        }
+    }
+}
+
 #[cfg(test)]
 mod random_tests {
     use super::Set;
     use quickcheck::quickcheck;
 
     quickcheck! {
+
         fn prop_member(vec: Vec<usize>, elems: Vec<usize>) -> bool {
-            let set = v2s(&vec);
+            let set: Set<usize> = vec.iter().cloned().collect();
 
-            for elem in elems {
-                let in_v = (&vec).into_iter().any(|x| *x == elem);
-                if set.contains(&elem) != in_v {
-                    return false;
-                }
-            }
-
-            true
+            elems.iter()
+                .all(|elem| vec.contains(elem) == set.contains(elem))
         }
 
-        fn prop_intersection(v1: Vec<usize>, v2: Vec<usize>) -> bool {
-            let s1 = v2s(&v1);
-            let s2 = v2s(&v2);
+        fn prop_intersection(s1: Set<usize>, s2: Set<usize>) -> bool {
             let s3 = s1.intersection(&s2);
 
-            for &elem in &v1 {
-                if s3.contains(&elem) != s2.contains(&elem) {
-                    return false;
-                }
-            }
+            s1.iter().all(|elem| s3.contains(elem) == s2.contains(elem))
 
-            for &elem in &v2 {
-                if s3.contains(&elem) != s1.contains(&elem) {
-                    return false;
-                }
-            }
+                &&
 
-            for &elem in &s3 {
-                if !s1.contains(&elem) || !s2.contains(&elem) {
-                    return false;
-                }
-            }
+            s2.iter().all(|elem| s3.contains(elem) == s1.contains(elem))
 
-            true
+                &&
+
+            s3.iter().all(|elem| s1.contains(elem) && s2.contains(elem))
+
         }
 
-        fn prop_union(v1: Vec<usize>, v2: Vec<usize>) -> bool {
-            let s1 = v2s(&v1);
-            let s2 = v2s(&v2);
+        fn prop_union(s1: Set<usize>, s2: Set<usize>) -> bool {
             let s3 = s1.union(&s2);
 
-            for &elem in &v1 {
-                if !s3.contains(&elem) {
-                    return false;
-                }
-            }
+            s1.iter().all(|elem| s3.contains(elem))
 
-            for &elem in &v2 {
-                if !s3.contains(&elem) {
-                    return false;
-                }
-            }
+                &&
 
-            for &elem in &s3 {
-                if !s1.contains(&elem) && !s2.contains(&elem) {
-                    return false;
-                }
-            }
+            s2.iter().all(|elem| s3.contains(elem))
 
-            true
+                &&
+
+            s3.iter().all(|elem| s1.contains(elem) || s2.contains(elem))
+
         }
+
     }
 
-    fn v2s<T: Clone + Ord>(vec: &Vec<T>) -> Set<T> {
-        ::std::iter::FromIterator::from_iter(vec.clone())
-    }
 }
+
