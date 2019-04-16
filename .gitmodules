@@ -1,0 +1,3 @@
+[submodule "03-rainfall"]
+	path = 03-rainfall
+	url = https://github.com/nu-rust-course/rainfall-rs
