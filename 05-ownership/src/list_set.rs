@@ -862,6 +862,7 @@ impl<'a, T, P> Drop for DrainFilter<'a, T, P>
 #[cfg(test)]
 mod random_tests {
     use super::Set;
+    use quickcheck::quickcheck;
 
     quickcheck! {
         fn prop_member(vec: Vec<usize>, elems: Vec<usize>) -> bool {
