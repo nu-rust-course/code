@@ -23,10 +23,13 @@ use std::mem;
 /// ```
 #[derive(Debug)]
 pub struct Set<T> {
-    head: Link<T>,
-    len: usize,
+    head: InnerSet<T>,
+    len:  usize,
 }
 // Invariant: the elements must be sorted according to <T as Ord>.
+
+#[derive(Debug)]
+struct InnerSet<T>(Link<T>);
 
 type Link<T> = Option<Box<Node<T>>>;
 
@@ -34,6 +37,22 @@ type Link<T> = Option<Box<Node<T>>>;
 struct Node<T> {
     data: T,
     link: Link<T>,
+}
+
+impl<T> Drop for InnerSet<T> {
+    fn drop(&mut self) {
+        let mut head = self.0.take();
+
+        while let Some(next) = head.take() {
+            head = next.link;
+        }
+    }
+}
+
+impl<T> Node<T> {
+    fn new(data: T, link: Link<T>) -> Option<Box<Self>> {
+        Some(Box::new(Node { data, link }))
+    }
 }
 
 impl<T> Set<T> {
@@ -49,7 +68,7 @@ impl<T> Set<T> {
     pub fn new() -> Self {
         Set {
             len:  0,
-            head: None,
+            head: InnerSet(None),
         }
     }
 
@@ -148,7 +167,7 @@ impl<T: Ord> Set<T> {
     /// assert!(!set.contains(&6));
     /// ```
     pub fn contains(&self, element: &T) -> bool {
-        let mut current = &self.head;
+        let mut current = &self.head.0;
 
         while let Some(ref node) = *current {
             match element.cmp(&node.data) {
@@ -184,8 +203,8 @@ impl<T: Ord> Set<T> {
     pub fn insert(&mut self, element: T) -> bool {
         let mut cur = CursorMut::new(self);
 
-        while !cur.is_empty() {
-            match element.cmp(cur.data()) {
+        while let Some(data) = cur.data() {
+            match element.cmp(data) {
                 Less => break,
                 Equal => return false,
                 Greater => cur.advance(),
@@ -214,11 +233,11 @@ impl<T: Ord> Set<T> {
     pub fn replace(&mut self, element: T) -> Option<T> {
         let mut cur = CursorMut::new(self);
 
-        while !cur.is_empty() {
-            match element.cmp(cur.data()) {
+        while let Some(data) = cur.data_mut() {
+            match element.cmp(data) {
                 Less => break,
                 Equal => {
-                    let old_data = mem::replace(cur.data(), element);
+                    let old_data = mem::replace(data, element);
                     return Some(old_data);
                 }
                 Greater => cur.advance(),
@@ -251,10 +270,10 @@ impl<T: Ord> Set<T> {
     pub fn remove(&mut self, element: &T) -> Option<T> {
         let mut cur = CursorMut::new(self);
 
-        while !cur.is_empty() {
-            match element.cmp(cur.data()) {
+        while let Some(data) = cur.data() {
+            match element.cmp(data) {
                 Less => break,
-                Equal => return Some(cur.remove()),
+                Equal => return cur.remove(),
                 Greater => cur.advance(),
             }
         }
@@ -263,66 +282,78 @@ impl<T: Ord> Set<T> {
     }
 }
 
+#[cfg(test)]
+mod stack_overflow_tests {
+    use super::Set;
+
+    fn iota(len: usize) -> Set<usize> {
+        let mut result = Set::new();
+
+        for i in (0..len).into_iter().rev() {
+            result.insert(i);
+        }
+
+        result
+    }
+
+    #[test]
+    fn len_iota() {
+        iota(100_000);
+    }
+}
+
 #[derive(Debug)]
 struct CursorMut<'a, T: 'a> {
     link: Option<&'a mut Link<T>>,
-    len: &'a mut usize,
+    len:  &'a mut usize,
 }
 
 impl<'a, T: 'a> CursorMut<'a, T> {
     fn new(set: &'a mut Set<T>) -> Self {
         CursorMut {
-            link: Some(&mut set.head),
-            len: &mut set.len,
+            link: Some(&mut set.head.0),
+            len:  &mut set.len,
         }
     }
 
+    #[allow(dead_code)]
     fn is_empty(&self) -> bool {
-        if let Some(&mut Some(_)) = self.link {false} else {true}
+        self.link.as_ref()
+            .and_then(|o| o.as_ref())
+            .is_none()
     }
 
-    fn data(&mut self) -> &mut T {
-        if let Some(&mut Some(ref mut node_ptr)) = self.link {
-            &mut node_ptr.data
-        } else {
-            panic!("CursorMut::data: empty cursor");
-        }
+    fn data_mut(&mut self) -> Option<&mut T> {
+        self.link.as_mut()
+            .and_then(|link_ptr| link_ptr.as_mut())
+            .map(|node_ptr| &mut node_ptr.data)
+    }
+
+    fn data(&self) -> Option<&T> {
+        self.link.as_ref()
+            .and_then(|link_ptr| link_ptr.as_ref())
+            .map(|node_ptr| &node_ptr.data)
     }
 
     fn advance(&mut self) {
-        let link = self.link.take().expect("CursorMut::advance: empty cursor");
-//      match link {
-//          &mut Some(ref mut node_ptr) => self.link = Some(&mut node_ptr.link),
-//          _ => panic!("CursorMut::advance: no next link"),
-//      }
-        self.link = Some(&mut link.as_mut().expect("CursorMut::advance: no next link").link);
+        self.link = self.link.take()
+            .and_then(|link_ptr| link_ptr.as_mut())
+            .map(|node_ptr| &mut node_ptr.link);
     }
 
-    fn remove(&mut self) -> T {
-        if let Some(ref mut link) = self.link {
-            if let Some(node_ptr) = link.take() {
-                let node = *node_ptr;
-                **link = node.link;
-                *self.len -= 1;
-                node.data
-            } else {
-                panic!("CursorMut::remove: no node to remove");
-            }
-        } else {
-            panic!("CursorMut::remove: empty cursor");
-        }
+    fn remove(&mut self) -> Option<T> {
+        let link_ptr = self.link.as_mut()?;
+        let Node { data, link } = *link_ptr.take()?;
+        **link_ptr = link;
+        *self.len -= 1;
+        Some(data)
     }
 
     fn insert(&mut self, data: T) {
-        if let Some(ref mut link_ptr) = self.link {
-            **link_ptr = Some(Box::new(Node {
-                data,
-                link: link_ptr.take(),
-            }));
-            *self.len += 1;
-        } else {
-            panic!("CursorMut::insert: empty cursor");
-        }
+        let link_ptr = self.link.as_mut()
+            .expect("CursorMut::insert: empty cursor");
+        **link_ptr = Node::new(data, link_ptr.take());
+        *self.len += 1;
     }
 }
 
@@ -382,7 +413,7 @@ impl<'a, T> IntoIterator for &'a Set<T> {
 
     fn into_iter(self) -> Iter<'a, T> {
         Iter {
-            link: &self.head,
+            link: &self.head.0,
             len: self.len,
         }
     }
@@ -414,12 +445,7 @@ impl<T> Iterator for IntoIter<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<T> {
-        let mut cur = CursorMut::new(&mut self.0);
-        if cur.is_empty() {
-            None
-        } else {
-            Some(cur.remove())
-        }
+        CursorMut::new(&mut self.0).remove()
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -497,11 +523,11 @@ impl<T: Clone> Clone for Set<T> {
         let mut result = Set::new();
 
         {
-            let mut cur = &mut result.head;
+            let mut cur = &mut result.head.0;
 
             for each in self {
-                *cur = Some(Box::new(Node { data: each.clone(), link: None, }));
-                cur = &mut {cur}.as_mut().unwrap().link;
+                *cur = Node::new(each.clone(), None);
+                cur  = &mut {cur}.as_mut().unwrap().link;
             }
         }
 
@@ -541,8 +567,8 @@ impl<T: Ord> Set<T> {
     /// assert!(!set3.is_disjoint(&set3));
     /// ```
     pub fn is_disjoint(&self, other: &Set<T>) -> bool {
-        let mut i = &self.head;
-        let mut j = &other.head;
+        let mut i = &self.head.0;
+        let mut j = &other.head.0;
 
         while let (&Some(ref ilink), &Some(ref jlink)) = (i, j) {
             match ilink.data.cmp(&jlink.data) {
@@ -578,8 +604,8 @@ impl<T: Ord> Set<T> {
     /// assert!( set3.is_subset(&set3));
     /// ```
     pub fn is_subset(&self, other: &Set<T>) -> bool {
-        let mut i = &self.head;
-        let mut j = &other.head;
+        let mut i = &self.head.0;
+        let mut j = &other.head.0;
 
         while let (&Some(ref ilink), &Some(ref jlink)) = (i, j) {
             match ilink.data.cmp(&jlink.data) {
@@ -834,10 +860,11 @@ impl<'a, T, P> Iterator for DrainFilter<'a, T, P>
     type Item = T;
 
     fn next(&mut self) -> Option<T> {
-        while !self.cursor.is_empty() {
+        while let Some(data) = self.cursor.data() {
             self.len -= 1;
-            if (self.pred)(self.cursor.data()) {
-                return Some(self.cursor.remove());
+
+            if (self.pred)(data) {
+                return self.cursor.remove();
             } else {
                 self.cursor.advance()
             }
