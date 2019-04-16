@@ -24,7 +24,7 @@ use std::mem;
 #[derive(Debug)]
 pub struct Set<T> {
     head: Link<T>,
-    len: usize,
+    len:  usize,
 }
 // Invariant: the elements must be sorted according to <T as Ord>.
 
@@ -34,6 +34,22 @@ type Link<T> = Option<Box<Node<T>>>;
 struct Node<T> {
     data: T,
     link: Link<T>,
+}
+
+impl<T> Drop for Set<T> {
+    fn drop(&mut self) {
+        let mut head = self.head.take();
+
+        while let Some(next) = head.take() {
+            head = next.link;
+        }
+    }
+}
+
+impl<T> Node<T> {
+    fn new(data: T, link: Link<T>) -> Option<Box<Self>> {
+        Some(Box::new(Node { data, link }))
+    }
 }
 
 impl<T> Set<T> {
@@ -184,8 +200,8 @@ impl<T: Ord> Set<T> {
     pub fn insert(&mut self, element: T) -> bool {
         let mut cur = CursorMut::new(self);
 
-        while !cur.is_empty() {
-            match element.cmp(cur.data()) {
+        while let Some(data) = cur.data() {
+            match element.cmp(data) {
                 Less => break,
                 Equal => return false,
                 Greater => cur.advance(),
@@ -214,11 +230,11 @@ impl<T: Ord> Set<T> {
     pub fn replace(&mut self, element: T) -> Option<T> {
         let mut cur = CursorMut::new(self);
 
-        while !cur.is_empty() {
-            match element.cmp(cur.data()) {
+        while let Some(data) = cur.data_mut() {
+            match element.cmp(data) {
                 Less => break,
                 Equal => {
-                    let old_data = mem::replace(cur.data(), element);
+                    let old_data = mem::replace(data, element);
                     return Some(old_data);
                 }
                 Greater => cur.advance(),
@@ -251,10 +267,10 @@ impl<T: Ord> Set<T> {
     pub fn remove(&mut self, element: &T) -> Option<T> {
         let mut cur = CursorMut::new(self);
 
-        while !cur.is_empty() {
-            match element.cmp(cur.data()) {
+        while let Some(data) = cur.data() {
+            match element.cmp(data) {
                 Less => break,
-                Equal => return Some(cur.remove()),
+                Equal => return cur.remove(),
                 Greater => cur.advance(),
             }
         }
@@ -263,66 +279,78 @@ impl<T: Ord> Set<T> {
     }
 }
 
+#[cfg(test)]
+mod stack_overflow_tests {
+    use super::Set;
+
+    fn iota(len: usize) -> Set<usize> {
+        let mut result = Set::new();
+
+        for i in (0..len).into_iter().rev() {
+            result.insert(i);
+        }
+
+        result
+    }
+
+    #[test]
+    fn len_iota() {
+        iota(100_000);
+    }
+}
+
 #[derive(Debug)]
 struct CursorMut<'a, T: 'a> {
     link: Option<&'a mut Link<T>>,
-    len: &'a mut usize,
+    len:  &'a mut usize,
 }
 
 impl<'a, T: 'a> CursorMut<'a, T> {
     fn new(set: &'a mut Set<T>) -> Self {
         CursorMut {
             link: Some(&mut set.head),
-            len: &mut set.len,
+            len:  &mut set.len,
         }
     }
 
+    #[allow(dead_code)]
     fn is_empty(&self) -> bool {
-        if let Some(&mut Some(_)) = self.link {false} else {true}
+        self.link.as_ref()
+            .and_then(|o| o.as_ref())
+            .is_none()
     }
 
-    fn data(&mut self) -> &mut T {
-        if let Some(&mut Some(ref mut node_ptr)) = self.link {
-            &mut node_ptr.data
-        } else {
-            panic!("CursorMut::data: empty cursor");
-        }
+    fn data_mut(&mut self) -> Option<&mut T> {
+        self.link.as_mut()
+            .and_then(|link_ptr| link_ptr.as_mut())
+            .map(|node_ptr| &mut node_ptr.data)
+    }
+
+    fn data(&self) -> Option<&T> {
+        self.link.as_ref()
+            .and_then(|link_ptr| link_ptr.as_ref())
+            .map(|node_ptr| &node_ptr.data)
     }
 
     fn advance(&mut self) {
-        let link = self.link.take().expect("CursorMut::advance: empty cursor");
-//      match link {
-//          &mut Some(ref mut node_ptr) => self.link = Some(&mut node_ptr.link),
-//          _ => panic!("CursorMut::advance: no next link"),
-//      }
-        self.link = Some(&mut link.as_mut().expect("CursorMut::advance: no next link").link);
+        self.link = self.link.take()
+            .and_then(|link_ptr| link_ptr.as_mut())
+            .map(|node_ptr| &mut node_ptr.link);
     }
 
-    fn remove(&mut self) -> T {
-        if let Some(ref mut link) = self.link {
-            if let Some(node_ptr) = link.take() {
-                let node = *node_ptr;
-                **link = node.link;
-                *self.len -= 1;
-                node.data
-            } else {
-                panic!("CursorMut::remove: no node to remove");
-            }
-        } else {
-            panic!("CursorMut::remove: empty cursor");
-        }
+    fn remove(&mut self) -> Option<T> {
+        let link_ptr = self.link.as_mut()?;
+        let Node { data, link } = *link_ptr.take()?;
+        **link_ptr = link;
+        *self.len -= 1;
+        Some(data)
     }
 
     fn insert(&mut self, data: T) {
-        if let Some(ref mut link_ptr) = self.link {
-            **link_ptr = Some(Box::new(Node {
-                data,
-                link: link_ptr.take(),
-            }));
-            *self.len += 1;
-        } else {
-            panic!("CursorMut::insert: empty cursor");
-        }
+        let link_ptr = self.link.as_mut()
+            .expect("CursorMut::insert: empty cursor");
+        **link_ptr = Node::new(data, link_ptr.take());
+        *self.len += 1;
     }
 }
 
@@ -414,12 +442,7 @@ impl<T> Iterator for IntoIter<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<T> {
-        let mut cur = CursorMut::new(&mut self.0);
-        if cur.is_empty() {
-            None
-        } else {
-            Some(cur.remove())
-        }
+        CursorMut::new(&mut self.0).remove()
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -500,8 +523,8 @@ impl<T: Clone> Clone for Set<T> {
             let mut cur = &mut result.head;
 
             for each in self {
-                *cur = Some(Box::new(Node { data: each.clone(), link: None, }));
-                cur = &mut {cur}.as_mut().unwrap().link;
+                *cur = Node::new(each.clone(), None);
+                cur  = &mut {cur}.as_mut().unwrap().link;
             }
         }
 
@@ -834,10 +857,11 @@ impl<'a, T, P> Iterator for DrainFilter<'a, T, P>
     type Item = T;
 
     fn next(&mut self) -> Option<T> {
-        while !self.cursor.is_empty() {
+        while let Some(data) = self.cursor.data() {
             self.len -= 1;
-            if (self.pred)(self.cursor.data()) {
-                return Some(self.cursor.remove());
+
+            if (self.pred)(data) {
+                return self.cursor.remove();
             } else {
                 self.cursor.advance()
             }
@@ -859,78 +883,70 @@ impl<'a, T, P> Drop for DrainFilter<'a, T, P>
     }
 }
 
+#[cfg(any(test, feature = "quickcheck"))]
+mod impl_arbitrary_for_set {
+    use super::Set;
+    use quickcheck::{Arbitrary, Gen};
+    use std::iter::FromIterator;
+
+    impl<T: Arbitrary + Ord> Arbitrary for Set<T> {
+        fn arbitrary<G: Gen>(g: &mut G) -> Self {
+            FromIterator::from_iter(Vec::<T>::arbitrary(g))
+        }
+
+        fn shrink(&self) -> Box<Iterator<Item=Self>> {
+            Box::new(Vec::from_iter(Set::clone(self))
+                .shrink()
+                .map(FromIterator::from_iter))
+        }
+    }
+}
+
 #[cfg(test)]
 mod random_tests {
     use super::Set;
+    use quickcheck::quickcheck;
 
     quickcheck! {
+
         fn prop_member(vec: Vec<usize>, elems: Vec<usize>) -> bool {
-            let set = v2s(&vec);
+            let set: Set<usize> = vec.iter().cloned().collect();
 
-            for elem in elems {
-                let in_v = (&vec).into_iter().any(|x| *x == elem);
-                if set.contains(&elem) != in_v {
-                    return false;
-                }
-            }
-
-            true
+            elems.iter()
+                .all(|elem| vec.contains(elem) == set.contains(elem))
         }
 
-        fn prop_intersection(v1: Vec<usize>, v2: Vec<usize>) -> bool {
-            let s1 = v2s(&v1);
-            let s2 = v2s(&v2);
+        fn prop_intersection(s1: Set<usize>, s2: Set<usize>) -> bool {
             let s3 = s1.intersection(&s2);
 
-            for &elem in &v1 {
-                if s3.contains(&elem) != s2.contains(&elem) {
-                    return false;
-                }
-            }
+            s1.iter().all(|elem| s3.contains(elem) == s2.contains(elem))
 
-            for &elem in &v2 {
-                if s3.contains(&elem) != s1.contains(&elem) {
-                    return false;
-                }
-            }
+                &&
 
-            for &elem in &s3 {
-                if !s1.contains(&elem) || !s2.contains(&elem) {
-                    return false;
-                }
-            }
+            s2.iter().all(|elem| s3.contains(elem) == s1.contains(elem))
 
-            true
+                &&
+
+            s3.iter().all(|elem| s1.contains(elem) && s2.contains(elem))
+
         }
 
-        fn prop_union(v1: Vec<usize>, v2: Vec<usize>) -> bool {
-            let s1 = v2s(&v1);
-            let s2 = v2s(&v2);
+        fn prop_union(s1: Set<usize>, s2: Set<usize>) -> bool {
             let s3 = s1.union(&s2);
 
-            for &elem in &v1 {
-                if !s3.contains(&elem) {
-                    return false;
-                }
-            }
+            s1.iter().all(|elem| s3.contains(elem))
 
-            for &elem in &v2 {
-                if !s3.contains(&elem) {
-                    return false;
-                }
-            }
+                &&
 
-            for &elem in &s3 {
-                if !s1.contains(&elem) && !s2.contains(&elem) {
-                    return false;
-                }
-            }
+            s2.iter().all(|elem| s3.contains(elem))
 
-            true
+                &&
+
+            s3.iter().all(|elem| s1.contains(elem) || s2.contains(elem))
+
         }
+
     }
 
-    fn v2s<T: Clone + Ord>(vec: &Vec<T>) -> Set<T> {
-        ::std::iter::FromIterator::from_iter(vec.clone())
-    }
 }
+

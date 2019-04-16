@@ -169,7 +169,7 @@ impl<K: Ord, V> Node<K, V> {
         }
 
         *ptr = Some(Node::new(key, value));
-        return None;
+        None
     }
 }
 
