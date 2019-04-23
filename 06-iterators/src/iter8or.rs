@@ -38,7 +38,7 @@ pub trait Iter8or {
         where Self: Sized
     {
         while n > 0 {
-            if self.next().is_none() { return None; }
+            self.next().as_ref()?;
             n -= 1;
         }
 

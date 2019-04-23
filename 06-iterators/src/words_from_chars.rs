@@ -78,7 +78,7 @@ mod tests {
         let actual_words: Vec<String> =
             Words::new(input.chars(), is_word_char).collect();
         let expected_words: Vec<String> =
-            expected_words.into_iter().map(|&s| s.to_owned()) .collect();
+            expected_words.iter().map(|&s| s.to_owned()) .collect();
         assert_eq!( actual_words, expected_words );
     }
 
@@ -89,7 +89,7 @@ mod tests {
                        is_word_char)
                 .collect();
         let expected_words: Vec<String> =
-            expected_words.into_iter().map(|&s| s.to_owned()) .collect();
+            expected_words.iter().map(|&s| s.to_owned()) .collect();
         assert_eq!( actual_words, expected_words );
     }
 }
