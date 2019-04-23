@@ -1,8 +1,8 @@
 //! Sets, represented as sorted, singly-linked lists.
 
-use super::{Iter8or, IntoIter8or, FromIter8or, ExactSizeIter8or, Xtend};
+//use super::{Iter8or, IntoIter8or, FromIter8or, ExactSizeIter8or, Xtend};
+use std::cmp::Ordering::*;
 
-use std::cmp::Ordering::{self, Less, Equal, Greater};
 use std::default::Default;
 use std::mem;
 
@@ -92,39 +92,39 @@ impl<T> Set<T> {
         self.len
     }
 
-    /// Returns a borrowing iterator over the elements of the set.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use iterators::list_set::Set;
-    /// use iterators::{Iter8or, FromIter8or};
-    ///
-    /// let set = Set::from_iter(vec![1, 3, 5]);
-    /// let mut result = Vec::new();
-    ///
-    /// let mut iter = set.iter();
-    ///
-    /// while let Some(elt) = iter.next() {
-    ///     result.push(elt);
-    /// }
-    ///
-    /// assert_eq!( result, &[&1, &3, &5] );
-    /// ```
-    pub fn iter(&self) -> Iter<T> {
-        self.into_iter8or()
-    }
+//    /// Returns a borrowing iterator over the elements of the set.
+//    ///
+//    /// # Example
+//    ///
+//    /// ```
+//    /// # use iterators::list_set::Set;
+//    /// use iterators::{Iter8or, FromIter8or};
+//    ///
+//    /// let set = Set::from_iter(vec![1, 3, 5]);
+//    /// let mut result = Vec::new();
+//    ///
+//    /// let mut iter = set.iter();
+//    ///
+//    /// while let Some(elt) = iter.next() {
+//    ///     result.push(elt);
+//    /// }
+//    ///
+//    /// assert_eq!( result, &[&1, &3, &5] );
+//    /// ```
+//    pub fn iter(&self) -> Iter<T> {
+//        self.into_iter8or()
+//    }
 
-    /// Returns an iterator that removes and returns elements satisfying a predicate, leaving the
-    /// rest in the set.
-    pub fn drain_filter<P: FnMut(&T) -> bool>(&mut self, pred: P) -> DrainFilter<T, P> {
-        let len = self.len;
-        DrainFilter {
-            cursor: CursorMut::new(self),
-            pred,
-            len,
-        }
-    }
+//    /// Returns an iterator that removes and returns elements satisfying a predicate, leaving the
+//    /// rest in the set.
+//    pub fn drain_filter<P: FnMut(&T) -> bool>(&mut self, pred: P) -> DrainFilter<T, P> {
+//        let len = self.len;
+//        DrainFilter {
+//            cursor: CursorMut::new(self),
+//            pred,
+//            len,
+//        }
+//    }
 }
 
 impl<T> Default for Set<T> {
@@ -329,201 +329,64 @@ impl<'a, T: 'a> CursorMut<'a, T> {
     }
 }
 
-/// An immutable iterator over the elements of a `Set`.
-///
-/// # Example
-///
-/// ```
-/// # use iterators::list_set::Set;
-/// use iterators::{Iter8or, IntoIter8or};
-///
-/// let mut set = Set::new();
-///
-/// set.insert(2);
-/// set.insert(4);
-/// set.insert(3);
-///
-/// let mut iter = (&set).into_iter8or();
-///
-/// assert_eq!(Some(&2), iter.next());
-/// assert_eq!(Some(&3), iter.next());
-/// assert_eq!(Some(&4), iter.next());
-/// assert_eq!(None, iter.next());
-/// ```
-#[derive(Debug)]
-pub struct Iter<'a, T: 'a> {
-    link: &'a Link<T>,
-    len: usize,
-}
+//impl<T: Ord> Ord for Set<T> {
+//    fn cmp(&self, other: &Set<T>) -> Ordering {
+//        let mut i = self.into_iter8or();
+//        let mut j = other.into_iter8or();
+//
+//        loop {
+//            match (i.next(), j.next()) {
+//                (None, None) => return Equal,
+//                (None, Some(_)) => return Less,
+//                (Some(_), None) => return Greater,
+//                (Some(a), Some(b)) => match a.cmp(b) {
+//                    Less => return Less,
+//                    Greater => return Greater,
+//                    Equal => continue,
+//                }
+//            }
+//        }
+//    }
+//}
 
-impl<'a, T> Iter8or for Iter<'a, T> {
-    type Item = &'a T;
+//impl<T: Ord> PartialOrd for Set<T> {
+//    fn partial_cmp(&self, other: &Set<T>) -> Option<Ordering> {
+//        Some(self.cmp(other))
+//    }
+//}
+//
+//impl<T: Ord> PartialEq for Set<T> {
+//    fn eq(&self, other: &Set<T>) -> bool {
+//        self.cmp(other) == Equal
+//    }
+//}
+//
+//impl<T: Ord> Eq for Set<T> {}
 
-    fn next(&mut self) -> Option<&'a T> {
-        match *self.link {
-            Some(ref node_ptr) => {
-                self.link = &node_ptr.link;
-                self.len -= 1;
-                Some(&node_ptr.data)
-            }
-            None => None,
-        }
-    }
+//impl<T: Clone> Clone for Set<T> {
+//    fn clone(&self) -> Self {
+//        let mut result = Set::new();
+//
+//        {
+//            let mut cur  = CursorMut::new(&mut result);
+//            let mut iter = self.into_iter8or();
+//
+//            while let Some(each) = iter.next() {
+//                cur.insert(each.clone());
+//                cur.advance();
+//            }
+//        }
+//
+//        result
+//    }
+//}
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.len, Some(self.len))
-    }
-}
-
-impl<'a, T> ExactSizeIter8or for Iter<'a, T> {
-    fn len(&self) -> usize {
-        self.len
-    }
-}
-
-impl<'a, T> IntoIter8or for &'a Set<T> {
-    type Item = &'a T;
-    type IntoIter = Iter<'a, T>;
-
-    fn into_iter8or(self) -> Iter<'a, T> {
-        Iter {
-            link: &self.head,
-            len: self.len,
-        }
-    }
-}
-
-/// An iterator that consumes a `Set` as it iterates.
-///
-/// # Example
-///
-/// ```
-/// # use iterators::list_set::Set;
-/// use iterators::{Iter8or, IntoIter8or};
-///
-/// let mut set = Set::new();
-///
-/// set.insert(2);
-/// set.insert(4);
-/// set.insert(3);
-///
-/// let mut iter = set.into_iter8or();
-///
-/// assert_eq!(Some(2), iter.next());
-/// assert_eq!(Some(3), iter.next());
-/// assert_eq!(Some(4), iter.next());
-/// assert_eq!(None, iter.next());
-/// ```
-#[derive(Debug)]
-pub struct IntoIter<T>(Set<T>);
-
-impl<T> Iter8or for IntoIter<T> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<T> {
-        let mut cur = CursorMut::new(&mut self.0);
-        if cur.is_empty() {
-            None
-        } else {
-            Some(cur.remove())
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.0.len, Some(self.0.len))
-    }
-}
-
-impl<T> ExactSizeIter8or for IntoIter<T> {
-    fn len(&self) -> usize {
-        self.0.len
-    }
-}
-
-impl<T> IntoIter8or for Set<T> {
-    type Item = T;
-    type IntoIter = IntoIter<T>;
-
-    fn into_iter8or(self) -> IntoIter<T> {
-        IntoIter(self)
-    }
-}
-
-impl<T: Ord> Xtend<T> for Set<T> {
-    fn xtend<I: IntoIter8or<Item=T>>(&mut self, pre_iter: I) {
-        let mut iter = pre_iter.into_iter8or();
-        while let Some(elem) = iter.next() {
-            self.insert(elem);
-        }
-    }
-}
-
-impl<T: Ord> FromIter8or<T> for Set<T> {
-    fn from_iter<I: IntoIter8or<Item=T>>(iter: I) -> Self {
-        let mut result = Set::new();
-        result.xtend(iter);
-        result
-    }
-}
-
-impl<T: Ord> Ord for Set<T> {
-    fn cmp(&self, other: &Set<T>) -> Ordering {
-        let mut i = self.into_iter8or();
-        let mut j = other.into_iter8or();
-
-        loop {
-            match (i.next(), j.next()) {
-                (None, None) => return Equal,
-                (None, Some(_)) => return Less,
-                (Some(_), None) => return Greater,
-                (Some(a), Some(b)) => match a.cmp(b) {
-                    Less => return Less,
-                    Greater => return Greater,
-                    Equal => continue,
-                }
-            }
-        }
-    }
-}
-
-impl<T: Ord> PartialOrd for Set<T> {
-    fn partial_cmp(&self, other: &Set<T>) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl<T: Ord> PartialEq for Set<T> {
-    fn eq(&self, other: &Set<T>) -> bool {
-        self.cmp(other) == Equal
-    }
-}
-
-impl<T: Ord> Eq for Set<T> {}
-
-impl<T: Clone> Clone for Set<T> {
-    fn clone(&self) -> Self {
-        let mut result = Set::new();
-
-        {
-            let mut cur  = CursorMut::new(&mut result);
-            let mut iter = self.into_iter8or();
-
-            while let Some(each) = iter.next() {
-                cur.insert(each.clone());
-                cur.advance();
-            }
-        }
-
-        result
-    }
-}
-
-#[test]
-fn test_clone() {
-    let set1: Set<usize> = vec![3, 5, 4].into_iter8or().collect();
-    let set2 = set1.clone();
-    assert_eq!(set2, set1);
-}
+//#[test]
+//fn test_clone() {
+//    let set1: Set<usize> = vec![3, 5, 4].into_iter8or().collect();
+//    let set2 = set1.clone();
+//    assert_eq!(set2, set1);
+//}
 
 impl<T: Ord> Set<T> {
     /// Returns whether two sets are disjoint.
@@ -609,341 +472,299 @@ impl<T: Ord> Set<T> {
     }
 }
 
-impl<T: Ord + Clone> Set<T> {
-    /// Returns the intersection of two sets.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use iterators::list_set::Set;
-    /// use iterators::FromIter8or;
-    ///
-    /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
-    /// let set2 = Set::from_iter(vec![1, 2, 3, 4]);
-    ///
-    /// let set3 = Set::from_iter(vec![1, 3]);
-    ///
-    /// assert_eq!(set3, set1.intersection(&set2));
-    /// assert_eq!(set3, set2.intersection(&set1));
-    /// ```
-    pub fn intersection(&self, other: &Set<T>) -> Self {
-        let mut result = Set::new();
+//impl<T: Ord + Clone> Set<T> {
+//    /// Returns the intersection of two sets.
+//    ///
+//    /// # Example
+//    ///
+//    /// ```
+//    /// # use iterators::list_set::Set;
+//    /// use iterators::FromIter8or;
+//    ///
+//    /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
+//    /// let set2 = Set::from_iter(vec![1, 2, 3, 4]);
+//    ///
+//    /// let set3 = Set::from_iter(vec![1, 3]);
+//    ///
+//    /// assert_eq!(set3, set1.intersection(&set2));
+//    /// assert_eq!(set3, set2.intersection(&set1));
+//    /// ```
+//    pub fn intersection(&self, other: &Set<T>) -> Self {
+//        let mut result = Set::new();
+//
+//        {
+//            let mut cur = CursorMut::new(&mut result);
+//
+//            let mut i = self.into_iter8or().peekable();
+//            let mut j = other.into_iter8or().peekable();
+//
+//            while let (Some(&a), Some(&b)) = (i.peek(), j.peek()) {
+//                match a.cmp(b) {
+//                    Less => {
+//                        i.next();
+//                    }
+//                    Greater => {
+//                        j.next();
+//                    }
+//                    Equal => {
+//                        cur.insert(a.clone());
+//                        cur.advance();
+//                        i.next();
+//                        j.next();
+//                    }
+//                }
+//            }
+//        }
+//
+//        result
+//    }
+//
+//    /// Returns the union of two sets.
+//    ///
+//    /// # Example
+//    ///
+//    /// ```
+//    /// # use iterators::list_set::Set;
+//    /// use iterators::FromIter8or;
+//    ///
+//    /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
+//    /// let set2 = Set::from_iter(vec![1, 2, 3, 4]);
+//    ///
+//    /// let set3 = Set::from_iter(vec![1, 2, 3, 4, 5, 7]);
+//    ///
+//    /// assert_eq!(set3, set1.union(&set2));
+//    /// assert_eq!(set3, set2.union(&set1));
+//    /// ```
+//    pub fn union(&self, other: &Set<T>) -> Self {
+//        let mut result = Set::new();
+//
+//        {
+//            let mut cur = CursorMut::new(&mut result);
+//
+//            let mut i = self.into_iter8or().peekable();
+//            let mut j = other.into_iter8or().peekable();
+//
+//            while let (Some(&a), Some(&b)) = (i.peek(), j.peek()) {
+//                match a.cmp(b) {
+//                    Less => {
+//                        cur.insert(a.clone());
+//                        cur.advance();
+//                        i.next();
+//                    }
+//                    Greater => {
+//                        cur.insert(b.clone());
+//                        cur.advance();
+//                        j.next();
+//                    }
+//                    Equal => {
+//                        cur.insert(a.clone());
+//                        cur.advance();
+//                        i.next();
+//                        j.next();
+//                    }
+//                }
+//            }
+//
+//            while let Some(a) = i.next() {
+//                cur.insert(a.clone());
+//                cur.advance();
+//            }
+//
+//            while let Some(b) = j.next() {
+//                cur.insert(b.clone());
+//                cur.advance();
+//            }
+//        }
+//
+//        result
+//    }
+//
+//    /// Returns the difference of two sets.
+//    ///
+//    /// # Example
+//    ///
+//    /// ```
+//    /// # use iterators::list_set::Set;
+//    /// use iterators::FromIter8or;
+//    ///
+//    /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
+//    /// let set2 = Set::from_iter(vec![1, 2, 3, 4]);
+//    ///
+//    /// let set3 = Set::from_iter(vec![5, 7]);
+//    /// let set4 = Set::from_iter(vec![2, 4]);
+//    ///
+//    /// assert_eq!(set3, set1.difference(&set2));
+//    /// assert_eq!(set4, set2.difference(&set1));
+//    /// ```
+//    pub fn difference(&self, other: &Set<T>) -> Self {
+//        let mut result = Set::new();
+//
+//        {
+//            let mut cur = CursorMut::new(&mut result);
+//
+//            let mut i = self.into_iter8or().peekable();
+//            let mut j = other.into_iter8or().peekable();
+//
+//            while let (Some(&a), Some(&b)) = (i.peek(), j.peek()) {
+//                match a.cmp(b) {
+//                    Less => {
+//                        cur.insert(a.clone());
+//                        cur.advance();
+//                        i.next();
+//                    }
+//                    Greater => {
+//                        j.next();
+//                    }
+//                    Equal => {
+//                        i.next();
+//                        j.next();
+//                    }
+//                }
+//            }
+//
+//            while let Some(a) = i.next() {
+//                cur.insert(a.clone());
+//                cur.advance();
+//            }
+//        }
+//
+//        result
+//    }
+//
+//    /// Returns the symmetric difference of two sets.
+//    ///
+//    /// # Example
+//    ///
+//    /// ```
+//    /// # use iterators::list_set::Set;
+//    /// use iterators::FromIter8or;
+//    ///
+//    /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
+//    /// let set2 = Set::from_iter(vec![1, 2, 3, 4]);
+//    ///
+//    /// let set3 = Set::from_iter(vec![2, 4, 5, 7]);
+//    ///
+//    /// assert_eq!(set3, set1.symmetric_difference(&set2));
+//    /// assert_eq!(set3, set2.symmetric_difference(&set1));
+//    /// ```
+//    pub fn symmetric_difference(&self, other: &Set<T>) -> Self {
+//        let mut result = Set::new();
+//
+//        {
+//            let mut cur = CursorMut::new(&mut result);
+//
+//            let mut i = self.into_iter8or().peekable();
+//            let mut j = other.into_iter8or().peekable();
+//
+//            while let (Some(&a), Some(&b)) = (i.peek(), j.peek()) {
+//                match a.cmp(b) {
+//                    Less => {
+//                        cur.insert(a.clone());
+//                        cur.advance();
+//                        i.next();
+//                    }
+//                    Greater => {
+//                        cur.insert(b.clone());
+//                        cur.advance();
+//                        j.next();
+//                    }
+//                    Equal => {
+//                        i.next();
+//                        j.next();
+//                    }
+//                }
+//            }
+//
+//            while let Some(a) = i.next() {
+//                cur.insert(a.clone());
+//                cur.advance();
+//            }
+//
+//            while let Some(b) = j.next() {
+//                cur.insert(b.clone());
+//                cur.advance();
+//            }
+//        }
+//
+//        result
+//    }
+//}
 
-        {
-            let mut cur = CursorMut::new(&mut result);
-
-            let mut i = self.into_iter8or().peekable();
-            let mut j = other.into_iter8or().peekable();
-
-            while let (Some(&a), Some(&b)) = (i.peek(), j.peek()) {
-                match a.cmp(b) {
-                    Less => {
-                        i.next();
-                    }
-                    Greater => {
-                        j.next();
-                    }
-                    Equal => {
-                        cur.insert(a.clone());
-                        cur.advance();
-                        i.next();
-                        j.next();
-                    }
-                }
-            }
-        }
-
-        result
-    }
-
-    /// Returns the union of two sets.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use iterators::list_set::Set;
-    /// use iterators::FromIter8or;
-    ///
-    /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
-    /// let set2 = Set::from_iter(vec![1, 2, 3, 4]);
-    ///
-    /// let set3 = Set::from_iter(vec![1, 2, 3, 4, 5, 7]);
-    ///
-    /// assert_eq!(set3, set1.union(&set2));
-    /// assert_eq!(set3, set2.union(&set1));
-    /// ```
-    pub fn union(&self, other: &Set<T>) -> Self {
-        let mut result = Set::new();
-
-        {
-            let mut cur = CursorMut::new(&mut result);
-
-            let mut i = self.into_iter8or().peekable();
-            let mut j = other.into_iter8or().peekable();
-
-            while let (Some(&a), Some(&b)) = (i.peek(), j.peek()) {
-                match a.cmp(b) {
-                    Less => {
-                        cur.insert(a.clone());
-                        cur.advance();
-                        i.next();
-                    }
-                    Greater => {
-                        cur.insert(b.clone());
-                        cur.advance();
-                        j.next();
-                    }
-                    Equal => {
-                        cur.insert(a.clone());
-                        cur.advance();
-                        i.next();
-                        j.next();
-                    }
-                }
-            }
-
-            while let Some(a) = i.next() {
-                cur.insert(a.clone());
-                cur.advance();
-            }
-
-            while let Some(b) = j.next() {
-                cur.insert(b.clone());
-                cur.advance();
-            }
-        }
-
-        result
-    }
-
-    /// Returns the difference of two sets.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use iterators::list_set::Set;
-    /// use iterators::FromIter8or;
-    ///
-    /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
-    /// let set2 = Set::from_iter(vec![1, 2, 3, 4]);
-    ///
-    /// let set3 = Set::from_iter(vec![5, 7]);
-    /// let set4 = Set::from_iter(vec![2, 4]);
-    ///
-    /// assert_eq!(set3, set1.difference(&set2));
-    /// assert_eq!(set4, set2.difference(&set1));
-    /// ```
-    pub fn difference(&self, other: &Set<T>) -> Self {
-        let mut result = Set::new();
-
-        {
-            let mut cur = CursorMut::new(&mut result);
-
-            let mut i = self.into_iter8or().peekable();
-            let mut j = other.into_iter8or().peekable();
-
-            while let (Some(&a), Some(&b)) = (i.peek(), j.peek()) {
-                match a.cmp(b) {
-                    Less => {
-                        cur.insert(a.clone());
-                        cur.advance();
-                        i.next();
-                    }
-                    Greater => {
-                        j.next();
-                    }
-                    Equal => {
-                        i.next();
-                        j.next();
-                    }
-                }
-            }
-
-            while let Some(a) = i.next() {
-                cur.insert(a.clone());
-                cur.advance();
-            }
-        }
-
-        result
-    }
-
-    /// Returns the symmetric difference of two sets.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use iterators::list_set::Set;
-    /// use iterators::FromIter8or;
-    ///
-    /// let set1 = Set::from_iter(vec![1, 3, 5, 7]);
-    /// let set2 = Set::from_iter(vec![1, 2, 3, 4]);
-    ///
-    /// let set3 = Set::from_iter(vec![2, 4, 5, 7]);
-    ///
-    /// assert_eq!(set3, set1.symmetric_difference(&set2));
-    /// assert_eq!(set3, set2.symmetric_difference(&set1));
-    /// ```
-    pub fn symmetric_difference(&self, other: &Set<T>) -> Self {
-        let mut result = Set::new();
-
-        {
-            let mut cur = CursorMut::new(&mut result);
-
-            let mut i = self.into_iter8or().peekable();
-            let mut j = other.into_iter8or().peekable();
-
-            while let (Some(&a), Some(&b)) = (i.peek(), j.peek()) {
-                match a.cmp(b) {
-                    Less => {
-                        cur.insert(a.clone());
-                        cur.advance();
-                        i.next();
-                    }
-                    Greater => {
-                        cur.insert(b.clone());
-                        cur.advance();
-                        j.next();
-                    }
-                    Equal => {
-                        i.next();
-                        j.next();
-                    }
-                }
-            }
-
-            while let Some(a) = i.next() {
-                cur.insert(a.clone());
-                cur.advance();
-            }
-
-            while let Some(b) = j.next() {
-                cur.insert(b.clone());
-                cur.advance();
-            }
-        }
-
-        result
-    }
-}
-
-#[derive(Debug)]
-pub struct DrainFilter<'a, T: 'a, P>
-    where P: FnMut(&T) -> bool
-{
-    cursor: CursorMut<'a, T>,
-    pred: P,
-    len: usize,
-}
-
-impl<'a, T, P> Iter8or for DrainFilter<'a, T, P>
-    where P: FnMut(&T) -> bool
-{
-    type Item = T;
-
-    fn next(&mut self) -> Option<T> {
-        while !self.cursor.is_empty() {
-            self.len -= 1;
-            if (self.pred)(self.cursor.data()) {
-                return Some(self.cursor.remove());
-            } else {
-                self.cursor.advance()
-            }
-        }
-
-        None
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (0, Some(self.len))
-    }
-}
-
-// This ensures the post-condition of `drop_filter` that all satisfying
-// elements are removed.
-impl<'a, T, P> Drop for DrainFilter<'a, T, P>
-    where P: FnMut(&T) -> bool
-{
-    fn drop(&mut self) {
-        while let Some(_) = self.next() {}
-    }
-}
-
-#[cfg(test)]
-mod random_tests {
-    use super::Set;
-    use iter8or::{IntoIter8or, FromIter8or, Iter8or};
-
-    quickcheck! {
-        fn prop_member(vec: Vec<usize>, elems: Vec<usize>) -> bool {
-            let set = v2s(&vec);
-
-            for elem in elems {
-                let in_v = (&vec).into_iter8or().any(|x| *x == elem);
-                if set.contains(&elem) != in_v {
-                    return false;
-                }
-            }
-
-            true
-        }
-
-        fn prop_intersection(v1: Vec<usize>, v2: Vec<usize>) -> bool {
-            let s1 = v2s(&v1);
-            let s2 = v2s(&v2);
-            let s3 = s1.intersection(&s2);
-
-            for &elem in &v1 {
-                if s3.contains(&elem) != s2.contains(&elem) {
-                    return false;
-                }
-            }
-
-            for &elem in &v2 {
-                if s3.contains(&elem) != s1.contains(&elem) {
-                    return false;
-                }
-            }
-
-            let mut s3i = s3.iter();
-            while let Some(&elem) = s3i.next() {
-                if !s1.contains(&elem) || !s2.contains(&elem) {
-                    return false;
-                }
-            }
-
-            true
-        }
-
-        fn prop_union(v1: Vec<usize>, v2: Vec<usize>) -> bool {
-            let s1 = v2s(&v1);
-            let s2 = v2s(&v2);
-            let s3 = s1.union(&s2);
-
-            for &elem in &v1 {
-                if !s3.contains(&elem) {
-                    return false;
-                }
-            }
-
-            for &elem in &v2 {
-                if !s3.contains(&elem) {
-                    return false;
-                }
-            }
-
-            let mut s3i = s3.iter();
-            while let Some(&elem) = s3i.next() {
-                if !s1.contains(&elem) && !s2.contains(&elem) {
-                    return false;
-                }
-            }
-
-            true
-        }
-    }
-
-    fn v2s<T: Clone + Ord>(vec: &Vec<T>) -> Set<T> {
-        FromIter8or::from_iter(vec.into_iter8or().map(Clone::clone))
-    }
-}
+//#[cfg(test)]
+//mod random_tests {
+//    use super::Set;
+//    use crate::iter8or::{IntoIter8or, FromIter8or, Iter8or};
+//
+//    quickcheck! {
+//        fn prop_member(vec: Vec<usize>, elems: Vec<usize>) -> bool {
+//            let set = v2s(&vec);
+//
+//            for elem in elems {
+//                let in_v = (&vec).into_iter8or().any(|x| *x == elem);
+//                if set.contains(&elem) != in_v {
+//                    return false;
+//                }
+//            }
+//
+//            true
+//        }
+//
+//        fn prop_intersection(v1: Vec<usize>, v2: Vec<usize>) -> bool {
+//            let s1 = v2s(&v1);
+//            let s2 = v2s(&v2);
+//            let s3 = s1.intersection(&s2);
+//
+//            for &elem in &v1 {
+//                if s3.contains(&elem) != s2.contains(&elem) {
+//                    return false;
+//                }
+//            }
+//
+//            for &elem in &v2 {
+//                if s3.contains(&elem) != s1.contains(&elem) {
+//                    return false;
+//                }
+//            }
+//
+//            let mut s3i = s3.iter();
+//            while let Some(&elem) = s3i.next() {
+//                if !s1.contains(&elem) || !s2.contains(&elem) {
+//                    return false;
+//                }
+//            }
+//
+//            true
+//        }
+//
+//        fn prop_union(v1: Vec<usize>, v2: Vec<usize>) -> bool {
+//            let s1 = v2s(&v1);
+//            let s2 = v2s(&v2);
+//            let s3 = s1.union(&s2);
+//
+//            for &elem in &v1 {
+//                if !s3.contains(&elem) {
+//                    return false;
+//                }
+//            }
+//
+//            for &elem in &v2 {
+//                if !s3.contains(&elem) {
+//                    return false;
+//                }
+//            }
+//
+//            let mut s3i = s3.iter();
+//            while let Some(&elem) = s3i.next() {
+//                if !s1.contains(&elem) && !s2.contains(&elem) {
+//                    return false;
+//                }
+//            }
+//
+//            true
+//        }
+//    }
+//
+//    fn v2s<T: Clone + Ord>(vec: &Vec<T>) -> Set<T> {
+//        FromIter8or::from_iter(vec.into_iter8or().map(Clone::clone))
+//    }
+//}
