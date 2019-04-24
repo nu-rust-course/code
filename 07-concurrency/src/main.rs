@@ -272,6 +272,8 @@ const HAIRCUT_MAX: u64 = 1000;
 const ARRIVAL_MIN: u64 = 150;
 const ARRIVAL_MAX: u64 = 250;
 
+// TODO: Could free_seats be an AtomicUsize?
+
 #[derive(Debug)]
 struct BarberState {
     free_seats:      Mutex<usize>,
