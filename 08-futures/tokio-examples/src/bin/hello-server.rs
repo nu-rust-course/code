@@ -1,6 +1,4 @@
-extern crate futures;
-extern crate tokio_core;
-extern crate tokio_io;
+#![allow(deprecated)]
 
 use futures::Future;
 use futures::stream::Stream;

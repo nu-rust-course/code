@@ -1,5 +1,7 @@
 //! Classic semaphores.
 
+#![allow(clippy::mutex_atomic)]
+
 use std::default::Default;
 use std::sync::{Mutex, Condvar};
 
