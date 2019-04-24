@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use futures::Future;
 use futures::stream::Stream;
 use tokio_core::reactor::Core;
