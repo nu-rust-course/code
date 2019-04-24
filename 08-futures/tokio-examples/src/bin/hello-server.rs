@@ -1,7 +1,3 @@
-extern crate futures;
-extern crate tokio_core;
-extern crate tokio_io;
-
 use futures::Future;
 use futures::stream::Stream;
 use tokio_core::reactor::Core;

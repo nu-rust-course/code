@@ -1,7 +1,3 @@
-extern crate futures;
-extern crate futures_cpupool;
-extern crate tokio_timer;
-
 use std::time::Duration;
 
 use futures::Future;
