@@ -1,5 +1,5 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
+#![allow(unused)]
+#![allow(clippy::mutex_atomic)]
 
 use std::{
     cmp::{min, max},
@@ -11,11 +11,9 @@ use std::{
     time::Duration,
 };
 
-use rand::distributions::{IndependentSample, Range};
+use rand::{Rng, thread_rng, distributions::Uniform};
 
 use semaphore::Semaphore;
-
-extern crate rand;
 
 mod semaphore;
 
@@ -35,7 +33,7 @@ const COUNT_TO_DELAY: u64 = 500;
 /// Counts from 1 to n, printing each
 fn count_to(who: usize, n: usize)
 {
-    for i in 1 .. n + 1 {
+    for i in 1 ..= n {
         thread::sleep(Duration::from_millis(COUNT_TO_DELAY));
         println!("{} says {}", who, i);
     }
@@ -87,10 +85,15 @@ fn mutex_demo(nthreads: usize) {
 ///////////////////////////////////////////////////////////////////////////////
 
 /// Sleeps for between min and max milliseconds
-fn random_sleep(min: u64, max: u64) {
-    let range  = Range::new(min, max + 1);
-    let millis = range.ind_sample(&mut rand::thread_rng());
-    thread::sleep(Duration::from_millis(millis));
+///
+/// # Panics
+///
+/// Panics if `min > max`.
+fn random_sleep(min: u64, mut max: u64) {
+    let dist = Uniform::new(Duration::from_millis(min),
+                            Duration::from_millis(max + 1));
+    let rng = &mut thread_rng();
+    thread::sleep(rng.sample(dist));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -329,8 +332,10 @@ fn sleeping_barber() {
 }
 
 fn sleeping_barber_2() {
-    let seats: Arc<Mutex<LinkedList<(usize, Arc<Semaphore>)>>>
-        = Arc::new(Mutex::new(LinkedList::new()));
+    type CustomerList = LinkedList<(usize, Arc<Semaphore>)>;
+
+    let seats: Arc<Mutex<CustomerList>>
+        = Arc::new(Mutex::new(CustomerList::new()));
     let customers_ready: Arc<Semaphore>
         = Arc::new(Semaphore::new(0));
 
@@ -420,7 +425,7 @@ fn sleeping_barbers() {
             thread::spawn(move || {
                 let (response_send, response_recv) = sync_channel(0);
 
-                if let Ok(_) = queue_back.try_send((i, response_send)) {
+                if queue_back.try_send((i, response_send)).is_ok() {
                     println!("Customer {} sits down", i);
                     let j = response_recv.recv().unwrap();
                     println!("Customer {} being cut by barber {}", i, j);
