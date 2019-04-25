@@ -17,17 +17,6 @@ use semaphore::Semaphore;
 
 mod semaphore;
 
-///////////////////////////////////////////////////////////////////////////////
-
-/// Waits for the user to press Enter.
-fn wait_for_enter() {
-    println!("Press enter to continue");
-    io::stdout().flush().expect("flush");
-    io::stdin().read_line(&mut String::new()).expect("read_line");
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 const COUNT_TO_DELAY: u64 = 500;
 
 /// Counts from 1 to n, printing each
@@ -80,20 +69,6 @@ fn mutex_demo(nthreads: usize) {
             *guard += 1;
         });
     }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-/// Sleeps for between min and max milliseconds
-///
-/// # Panics
-///
-/// Panics if `min > max`.
-fn random_sleep(min: u64, mut max: u64) {
-    let dist = Uniform::new(Duration::from_millis(min),
-                            Duration::from_millis(max + 1));
-    let rng = &mut thread_rng();
-    thread::sleep(rng.sample(dist));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -439,6 +414,31 @@ fn sleeping_barbers() {
             });
         }
     });
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+/*
+ * Useful little helpers:
+ */
+
+/// Prints a message and waits for the user to press enter.
+fn wait_for_enter() {
+    println!("Press enter to continue");
+    io::stdout().flush().expect("flush");
+    io::stdin().read_line(&mut String::new()).expect("read_line");
+}
+
+/// Sleeps for between min and max milliseconds
+///
+/// # Panics
+///
+/// Panics if `min > max`.
+fn random_sleep(min: u64, mut max: u64) {
+    let dist = Uniform::new(Duration::from_millis(min),
+                            Duration::from_millis(max + 1));
+    let rng = &mut thread_rng();
+    thread::sleep(rng.sample(dist));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
