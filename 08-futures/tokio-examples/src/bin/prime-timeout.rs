@@ -1,6 +1,4 @@
-extern crate futures;
-extern crate futures_cpupool;
-extern crate tokio_timer;
+#![allow(deprecated)]
 
 use std::time::Duration;
 

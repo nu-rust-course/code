@@ -2,6 +2,7 @@
 name = "tokio-examples"
 version = "0.1.0"
 authors = ["Jesse A. Tov <jesse.tov@gmail.com>"]
+edition = "2018"
 
 [dependencies]
 bytes = "0.4"

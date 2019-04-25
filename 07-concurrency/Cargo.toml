@@ -1,6 +1,8 @@
 [package]
-name = "futures"
+name = "concurrency"
 version = "0.1.0"
 authors = ["Jesse A. Tov <jesse.tov@gmail.com>"]
+edition = "2018"
 
 [dependencies]
+rand = "0.6.5"
