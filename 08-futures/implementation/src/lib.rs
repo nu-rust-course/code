@@ -1,6 +1,9 @@
 //! A futures represents an asynchronous computation that eventually
 //! will complete and produce a value.
 
+
+pub mod graph_api;
+
 use std::mem;
 
 /// Type to indicate readyness or not.

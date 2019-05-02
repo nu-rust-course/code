@@ -16,6 +16,7 @@ use rand::{Rng, thread_rng, distributions::Uniform};
 //use semaphore::Semaphore;
 
 mod semaphore;
+mod logging;
 
 const COUNT_TO_DELAY: u64 = 500;
 
@@ -73,3 +74,4 @@ fn main() {
 
     wait_for_enter();
 }
+
