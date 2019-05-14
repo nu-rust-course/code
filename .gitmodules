@@ -1,3 +1,6 @@
 [submodule "03-rainfall"]
 	path = 03-rainfall
 	url = https://github.com/nu-rust-course/rainfall-rs
+[submodule "spell-bench"]
+	path = spell-bench
+	url = https://github.com/nu-rust-course/spell-bench.git
