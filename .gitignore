@@ -1,0 +1,13 @@
+# CMake build directories:
+cmake-build-*/
+build/
+build.*/
+
+# Cargo/Rust build directory:
+target/
+
+# CLion configuration:
+.idea/
+
+# Assembly output:
+*.s
