@@ -1,0 +1,8 @@
+[package]
+name = "ub"
+version = "0.1.0"
+authors = ["Jesse A. Tov <jesse@cs.northwestern.edu>"]
+edition = "2018"
+
+
+[dependencies]
