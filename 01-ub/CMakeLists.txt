@@ -11,7 +11,6 @@ endmacro (add_program)
 
 add_program(div_mul cxx-src/div_mul.cpp)
 add_program(int_max cxx-src/int_max.cxx)
-add_program(null_check cxx-src/null_check.cxx)
 add_program(uninitialized cxx-src/uninitialized.cxx)
 add_program(array cxx-src/array.cxx)
 add_program(iterator cxx-src/iterator.cxx)
