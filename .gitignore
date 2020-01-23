@@ -3,11 +3,11 @@ cmake-build-*/
 build/
 build.*/
 
+# IDEA config
+.idea/
+
 # Cargo/Rust build directory:
 target/
-
-# CLion configuration:
-.idea/
 
 # Assembly output:
 *.s
