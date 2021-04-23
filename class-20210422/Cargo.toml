@@ -1,0 +1,9 @@
+[package]
+name = "class-20210422"
+version = "0.1.0"
+authors = ["Jesse A. Tov <jesse.tov@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
